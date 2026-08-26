@@ -1,0 +1,34 @@
+# Covers JetBrains IDEs: IntelliJ, GoLand, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
+# See https://intellij-support.jetbrains.com/hc/en-us/articles/206544839 for more details about ignoring files.
+.idea
+.venv
+
+# User-specific stuff
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+
+# AWS User Agreement Tool task caches
+.idea/.aws
+
+# Generated files
+.idea/**/contentModel.xml
+
+# Sensitive data or local interpreter configs
+.idea/misc.xml
+
+# Log files
+.idea/**/httpRequests/
+
+# File-based project format (if applicable)
+*.iws
+
+# JetBrains Rider
+.idea/**/sln.iml
+.env
+
+# SQLite database files
+*.sqlite
+/stations.db
