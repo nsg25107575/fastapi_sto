@@ -32,3 +32,7 @@
 # SQLite database files
 *.sqlite
 /stations.db
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
