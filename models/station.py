@@ -1,105 +1,91 @@
-from sqlalchemy import String
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import Mapped, mapped_column, Session
-from sqlalchemy.sql.schema import Index, UniqueConstraint
-from sqlalchemy.exc import IntegrityError
+from datetime import datetime
 
-Base = declarative_base()
+from sqlalchemy import (
+    String,
+    Boolean,
+    Float,
+    DateTime,
+    Index,
+    UniqueConstraint,
+    text,
+)
+from sqlalchemy.orm import Mapped, mapped_column
+
+
+from database import Base
 
 
 class StationModel(Base):
     __tablename__ = "stations"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    address: Mapped[str] = mapped_column(String(200), nullable=False)
-    lng: Mapped[float] = mapped_column(nullable=True)
-    lat: Mapped[float] = mapped_column(nullable=True)
-
-    __table_args__ = (
-        Index("idx_station_name_address", "name", "address", unique=True),
-        Index("idx_station_lng_lat", "lng", "lat", unique=False),
-        UniqueConstraint("name", "address", name="uq_station_name_per_address"),
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+        autoincrement=True
     )
 
-    @staticmethod
-    def create_station(
-            session: Session,
-            name: str,
-            address: str
-    ):
-        station = StationModel(
-            name=name,
-            address=address
-        )
+    name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False
+    )
 
-        try:
-            session.add(station)
-            session.commit()
-            session.refresh(station)
+    address: Mapped[str] = mapped_column(
+        String(200),
+        nullable=False
+    )
 
-            return station
+    active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("1")
+    )
 
-        except IntegrityError:
-            session.rollback()
-            raise
+    latitude: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True
+    )
 
-    @staticmethod
-    def read_station(
-            session: Session,
-            station_id: int
-    ):
-        return session.get(StationModel, station_id)
+    longitude: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True
+    )
 
-    @staticmethod
-    def read_stations(
-            session: Session
-    ):
-        return session.query(StationModel).all()
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=text("CURRENT_TIMESTAMP")
+    )
 
-    @staticmethod
-    def update_station(
-            # connection bd
-            session: Session,
-            # Which station are we looking for?
-            station_id: int,
-            name: str | None = None,
-            address: str | None = None
-    ):
-        station = session.get(StationModel, station_id)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=text("CURRENT_TIMESTAMP")
+    )
 
-        if station is None:
-            return None
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True
+    )
 
-        if name is not None:
-            station.name = name
+    __table_args__ = (
+        UniqueConstraint(
+            "name",
+            "address",
+            name="uq_station_name_per_address"
+        ),
 
-        if address is not None:
-            station.address = address
+        Index(
+            "idx_station_name",
+            "name"
+        ),
 
-        session.commit()
-        session.refresh(station)
+        Index(
+            "idx_station_address",
+            "address"
+        ),
 
-        return station
-
-    @staticmethod
-    def delete_station(
-            # connection bd
-            session: Session,
-            # Which station are we looking for?
-            station_id: int
-    ):
-        station = session.get(StationModel, station_id)
-
-        if station is None:
-            return None
-
-        try:
-            session.delete(station)
-            session.commit()
-
-            return station_id
-        # If an error occurs during deletion, the transaction is rolled back.
-        except Exception:
-            session.rollback()
-            raise
+        Index(
+            "idx_station_longitude_latitude",
+            "longitude",
+            "latitude"
+        ),
+    )
