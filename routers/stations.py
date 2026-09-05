@@ -10,6 +10,7 @@ router = APIRouter()
 
 def get_session():
     session = SessionLocal()
+
     try:
         yield session
     finally:
@@ -69,14 +70,24 @@ def update_station(
         station_id: int,
         name: str | None = None,
         address: str | None = None,
+        active: bool | None = None,
         session: Session = Depends(get_session)
 ):
-    return StationModel.update_station(
+    station = StationModel.update_station(
         session=session,
         station_id=station_id,
         name=name,
-        address=address
+        address=address,
+        active=active
     )
+
+    if station is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Станция не найдена"
+        )
+
+    return station
 
 
 @router.delete("/{station_id}")
@@ -84,7 +95,15 @@ def delete_station(
         station_id: int,
         session: Session = Depends(get_session)
 ):
-    return StationModel.delete_station(
+    station = StationModel.delete_station(
         session=session,
         station_id=station_id
     )
+
+    if station is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Станция не найдена"
+        )
+
+    return station

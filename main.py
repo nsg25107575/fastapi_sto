@@ -1,19 +1,18 @@
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from routers.location import router as location_router
+from models.station_contact import StationContactModel
+from models.station_service import StationServiceModel
 
-load_dotenv()  # Load environment variables from .env file
+load_dotenv()
 
-from database import engine
-from models.station import Base
 from routers import stations
 
-# Create the database tables
-Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
-
-# Include the stations router
 app.include_router(
     stations.router,
     prefix="/stations"
 )
+
+app.include_router(location_router)
