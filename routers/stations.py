@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 
 from database import SessionLocal
 from models.station import StationModel
+from auth.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -17,7 +18,10 @@ def get_session():
         session.close()
 
 
-@router.post("/")
+@router.post(
+    "/",
+    dependencies=[Depends(get_current_user)]
+)
 def add_station(
         name: str,
         address: str,
@@ -65,7 +69,10 @@ def get_stations(
     )
 
 
-@router.put("/{station_id}")
+@router.put(
+    "/{station_id}",
+    dependencies=[Depends(get_current_user)]
+)
 def update_station(
         station_id: int,
         name: str | None = None,
@@ -90,7 +97,10 @@ def update_station(
     return station
 
 
-@router.delete("/{station_id}")
+@router.delete(
+    "/{station_id}",
+    dependencies=[Depends(get_current_user)]
+)
 def delete_station(
         station_id: int,
         session: Session = Depends(get_session)

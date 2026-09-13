@@ -20,65 +20,115 @@ def location_page():
     <html lang="ru">
     <head>
         <meta charset="UTF-8">
-        <title>Моё местоположение</title>
+        <title>Моє місце знаходження</title>
     </head>
 
     <body>
 
-        <h1>Определение местоположения</h1>
+        <h1>Визначення місця знаходження</h1>
 
         <button onclick="getLocation()">
-            Определить моё местоположение
+            Визначити моє місце знаходження
         </button>
 
-        <p id="result"></p>
+        <pre id="result"></pre>
 
         <script>
 
-            async function getLocation() {
+            function getLocation() {
 
-                const result = document.getElementById("result");
+                const result =
+                    document.getElementById("result");
 
-                result.textContent = "Определяем местоположение...";
+                result.textContent =
+                    "Визначаємо місце знаходження...";
 
                 if (!navigator.geolocation) {
+
                     result.textContent =
-                        "Ваш браузер не поддерживает Geolocation API";
+                        "Ваш браузер не підтримує Geolocation API";
+
                     return;
                 }
 
                 navigator.geolocation.getCurrentPosition(
 
-                    async function(position) {
+                    function(position) {
 
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
+                        const lat =
+                            position.coords.latitude;
 
-                        result.textContent =
-                            `Широта: ${lat}, Долгота: ${lng}`;
+                        const lng =
+                            position.coords.longitude;
 
-                        const response = await fetch("/location/", {
+                        // Зберегти координати в localStorage
+                        localStorage.setItem(
+                            "customer_lat",
+                            lat
+                        );
+
+                        localStorage.setItem(
+                            "customer_lng",
+                            lng
+                        );
+
+                        // Визначення координат на FastAPI
+                        fetch("/location/", {
                             method: "POST",
-
                             headers: {
                                 "Content-Type": "application/json"
                             },
-
                             body: JSON.stringify({
                                 lat: lat,
                                 lng: lng
                             })
+                        })
+
+                        .then(response => {
+
+                            if (!response.ok) {
+                                throw new Error(
+                                    "Помилка HTTP: "
+                                    + response.status
+                                );
+                            }
+
+                            return response.json();
+                        })
+
+                        .then(data => {
+
+                            result.textContent =
+                                "Широта: "
+                                + data.lat
+                                + "\\n"
+                                + "Довгота: "
+                                + data.lng
+                                + "\\n\\n"
+                                + data.message;
+                        })
+
+                        .catch(error => {
+
+                            result.textContent =
+                                "GPS отримано, "
+                                + "але координати не вдалося "
+                                + "відправити на сервер.\\n\\n"
+                                + "Широта: "
+                                + lat
+                                + "\\n"
+                                + "Долгота: "
+                                + lng
+                                + "\\n\\n"
+                                + "помилка: "
+                                + error.message;
                         });
-
-                        const data = await response.json();
-
-                        console.log(data);
                     },
 
                     function(error) {
 
                         result.textContent =
-                            "Не удалось определить местоположение: "
+                            "Не вдалося визначити місце знаходження: "
                             + error.message;
                     }
                 );
@@ -94,7 +144,7 @@ def location_page():
 @router.post("/")
 def receive_location(location: Location):
     return {
-        "message": "Координаты получены",
+        "message": "Координати отримано сервером",
         "lat": location.lat,
         "lng": location.lng
     }

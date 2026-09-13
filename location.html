@@ -1,63 +1,75 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
-    <title>Моё местоположение</title>
+    <title>Визначення місця розташування</title>
 </head>
+
 <body>
 
-<h1>Моё местоположение</h1>
+<h1>Визначення місця розташування</h1>
 
 <button onclick="getLocation()">
-    Определить моё местоположение
+    Визначити моє місця розташування
 </button>
 
 <p id="result"></p>
 
 <script>
+
 async function getLocation() {
 
+    const result = document.getElementById("result");
+
     if (!navigator.geolocation) {
-        document.getElementById("result").textContent =
-            "Браузер не поддерживает определение местоположения";
+
+        result.textContent =
+            "Браузер не підтримує місця розташування.";
+
         return;
     }
 
+    result.textContent =
+        "Визначаємо місця розташування...";
+
     navigator.geolocation.getCurrentPosition(
-        async (position) => {
+
+        (position) => {
 
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
 
-            document.getElementById("result").textContent =
+            result.textContent =
                 `Широта: ${lat}, Долгота: ${lng}`;
 
-            const response = await fetch(
-                "http://127.0.0.1:8001/location/",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        lat: lat,
-                        lng: lng
-                    })
-                }
-            );
+            /*
+             * Повертаємося в Swagger.
+             *
+             * Координати передаємо через URL.
+             */
 
-            const data = await response.json();
+            const swaggerUrl =
+                `/docs?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`;
 
-            console.log(data);
+            setTimeout(() => {
+
+                window.location.href = swaggerUrl;
+
+            }, 1000);
         },
 
         (error) => {
-            document.getElementById("result").textContent =
-                "Не удалось получить местоположение: " + error.message;
+
+            result.textContent =
+                "Не вдалося визначити місце знаходження: " +
+                error.message;
         }
     );
 }
+
 </script>
 
 </body>
+
 </html>

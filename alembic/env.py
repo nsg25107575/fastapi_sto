@@ -11,6 +11,8 @@ from database import Base
 from models.station import StationModel
 from models.vehicle import VehicleModel
 from models.user import UserModel
+from models.customer import CustomerModel
+
 from models.token import TokenModel
 from models.station_service import StationServiceModel
 from models.station_role import StationRoleModel

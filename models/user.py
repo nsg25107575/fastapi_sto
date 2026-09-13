@@ -1,9 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, Index
+from sqlalchemy import DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
+
 
 class UserModel(Base):
     __tablename__ = "users"
@@ -41,7 +42,7 @@ class UserModel(Base):
     )
 
     password: Mapped[str] = mapped_column(
-        String(100),
+        String(255),
         nullable=False,
     )
 
@@ -61,12 +62,4 @@ class UserModel(Base):
         DateTime,
         nullable=True,
         server_default=None,
-    )
-
-    __table_args__ = (
-        Index(
-            "idx_user_email",
-            "email",
-            unique=True,
-        ),
     )

@@ -11,7 +11,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-
 from database import Base
 
 
@@ -89,3 +88,86 @@ class StationModel(Base):
             "latitude"
         ),
     )
+
+    @staticmethod
+    def create_station(
+            session,
+            name: str,
+            address: str
+    ):
+        station = StationModel(
+            name=name,
+            address=address
+        )
+
+        session.add(station)
+        session.commit()
+        session.refresh(station)
+
+        return station
+
+    @staticmethod
+    def read_station(
+            session,
+            station_id: int
+    ):
+        return session.get(
+            StationModel,
+            station_id
+        )
+
+    @staticmethod
+    def read_stations(
+            session
+    ):
+        return session.query(
+            StationModel
+        ).all()
+
+    @staticmethod
+    def update_station(
+            session,
+            station_id: int,
+            name: str | None = None,
+            address: str | None = None,
+            active: bool | None = None
+    ):
+        station = session.get(
+            StationModel,
+            station_id
+        )
+
+        if station is None:
+            return None
+
+        if name is not None:
+            station.name = name
+
+        if address is not None:
+            station.address = address
+
+        if active is not None:
+            station.active = active
+
+        session.commit()
+        session.refresh(station)
+
+        return station
+
+    @staticmethod
+    def delete_station(
+            session,
+            station_id: int
+    ):
+        station = session.get(
+            StationModel,
+            station_id
+        )
+
+        if station is None:
+            return None
+
+        session.delete(station)
+        session.commit()
+
+        return station_id

@@ -8,9 +8,16 @@ load_dotenv()
 
 @dataclass.dataclass
 class Config:
-    """
-    Configuration class for the application.
-    This class is responsible for loading and managing application settings.
-    """
+    db_url: str = os.getenv(
+        "DATABASE_URL",
+        "sqlite:///./test.db"
+    )
 
-    db_url: str = os.getenv("DATABASE_URL", "sqlite:///./test.db")
+    jwt_secret_key: str = os.getenv(
+        "JWT_SECRET_KEY",
+        ""
+    )
+
+    jwt_algorithm: str = "HS256"
+
+    token_expiration_minutes: int = 30
