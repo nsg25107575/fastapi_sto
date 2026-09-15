@@ -23,39 +23,34 @@ def get_session():
         session.close()
 
 
-def generate_device_hash(length: int = 20) -> str:
+def generate_device_hash(length: int = 36) -> str:
     characters = string.ascii_letters + string.digits
-
-    return "".join(
-        secrets.choice(characters)
-        for _ in range(length)
-    )
+    return "".join(secrets.choice(characters) for _ in range(length))
 
 
 @router.post(
     "/",
     response_model=CustomerResponse,
     description="""
-Створення Customer.
- Для автоматичного визначення координат:
-[Визначити моє місце знаходження](/location/)
-після цього повертаємося в Swagger.
-"""
+    <a id="customer-data-link" href="/location" target="_blank" rel="noopener noreferrer">
+        Get location
+    </a>
+    """
 )
 def create_customer(
         customer: CustomerCreate,
         request: Request,
         session: Session = Depends(get_session),
 ):
-    client_ip = request.client.host
-
+    ip = request.client.host
     device_hash = generate_device_hash()
 
     new_customer = CustomerModel(
-        ip=client_ip,
+        ip=ip,
         device_hash=device_hash,
         lat=customer.lat,
         lng=customer.lng,
+        public_data=customer.public_data,
     )
 
     session.add(new_customer)

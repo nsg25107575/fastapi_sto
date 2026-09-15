@@ -17,129 +17,102 @@ class Location(BaseModel):
 def location_page():
     return """
     <!DOCTYPE html>
-    <html lang="ru">
+    <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Моє місце знаходження</title>
+        <title>GeoLocation API</title>
     </head>
-
     <body>
-
-        <h1>Визначення місця знаходження</h1>
-
-        <button onclick="getLocation()">
-            Визначити моє місце знаходження
-        </button>
-
-        <pre id="result"></pre>
-
         <script>
-
-            function getLocation() {
-
-                const result =
-                    document.getElementById("result");
-
-                result.textContent =
-                    "Визначаємо місце знаходження...";
-
-                if (!navigator.geolocation) {
-
-                    result.textContent =
-                        "Ваш браузер не підтримує Geolocation API";
-
-                    return;
-                }
-
-                navigator.geolocation.getCurrentPosition(
-
-                    function(position) {
-
-                        const lat =
-                            position.coords.latitude;
-
-                        const lng =
-                            position.coords.longitude;
-
-                        // Зберегти координати в localStorage
-                        localStorage.setItem(
-                            "customer_lat",
-                            lat
-                        );
-
-                        localStorage.setItem(
-                            "customer_lng",
-                            lng
-                        );
-
-                        // Визначення координат на FastAPI
-                        fetch("/location/", {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({
-                                lat: lat,
-                                lng: lng
-                            })
-                        })
-
-                        .then(response => {
-
-                            if (!response.ok) {
-                                throw new Error(
-                                    "Помилка HTTP: "
-                                    + response.status
-                                );
-                            }
-
-                            return response.json();
-                        })
-
-                        .then(data => {
-
-                            result.textContent =
-                                "Широта: "
-                                + data.lat
-                                + "\\n"
-                                + "Довгота: "
-                                + data.lng
-                                + "\\n\\n"
-                                + data.message;
-                        })
-
-                        .catch(error => {
-
-                            result.textContent =
-                                "GPS отримано, "
-                                + "але координати не вдалося "
-                                + "відправити на сервер.\\n\\n"
-                                + "Широта: "
-                                + lat
-                                + "\\n"
-                                + "Долгота: "
-                                + lng
-                                + "\\n\\n"
-                                + "помилка: "
-                                + error.message;
-                        });
-                    },
-
-                    function(error) {
-
-                        result.textContent =
-                            "Не вдалося визначити місце знаходження: "
-                            + error.message;
+            const lS = localStorage;
+                        
+            // Generate device hash
+            const generateDeviceHash = () => {
+                //Timestamp
+                let dt = new Date().getTime();
+                //Time in microseconds since page-load or 0 if unsupported
+                let dt2 = ((typeof performance !== 'undefined') && performance.now && (performance.now() * 1000)) || 0;
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    let rd = Math.random() * 16; //random number between 0 and 16
+                    if(dt > 0) { //Use timestamp until depleted
+                        rd = (dt + rd) % 16 | 0;
+                        dt = Math.floor(dt / 16);
+                    } else { //Use microseconds since page-load if supported
+                        rd = (dt2 + rd) % 16 | 0;
+                        dt2 = Math.floor(dt2 / 16);
                     }
-                );
+                    return (c === 'x' ? rd : (rd & 0x3 | 0x8)).toString(16);
+                });
+            };
+            
+            // Store device hash
+            const setDeviceHash = () => {
+                const dh = generateDeviceHash();
+
+                if (!lS.hasOwnProperty('device_hash')) {
+                    lS.setItem('device_hash', dh);
+                }
+            };
+            
+            // Get coordinates and save to local storage
+            const coordinates = (geoPosition) => {              
+                const lat = geoPosition.coords.latitude;
+                const lng = geoPosition.coords.longitude;
+                
+                const savedLat = lS.getItem('lat') ?? null;
+                const savedLng = lS.getItem('lng') ?? null;
+                
+                if (!lS.hasOwnProperty('lat') || savedLat !== lat) {
+                    lS.setItem('lat', lat);
+                }
+                
+                if (!lS.hasOwnProperty('lng') || savedLng !== lng) {
+                    lS.setItem('lng', lng);
+                }
+            };
+            
+            // Get user IP detailed information
+            const getIPDetails = async () => {
+                try {
+                    const response = await fetch("https://ipapi.co/json/");
+                    const data = await response.json();
+                    return data;
+                } catch (e) {
+                    console.error("Error:", e);
+                }
             }
-
+            
+            // Set user IP to local storage
+            const setUserIP = async () => {
+                const IPdata = await getIPDetails();
+                const publicIP = IPdata['ip'];
+                const savedIp = lS.getItem('user_public_ip') ?? '127.0.0.1';
+                
+                if (!lS.hasOwnProperty('user_public_ip') || savedIp !== publicIP) {
+                    lS.setItem('user_public_ip', publicIP);
+                    lS.setItem('user_public_data', JSON.stringify(IPdata));
+                }
+            }
+            
+            // Run code after DOM ready
+            document.addEventListener('DOMContentLoaded', () => {    
+                // Set device hash to local storage
+                setDeviceHash();
+                // Check navigator have to customer coordinates
+                if (navigator.geolocation) {
+                    // Get coordinates form GeoLocation API
+                    navigator.geolocation.getCurrentPosition(coordinates);
+                } else {
+                    //TODO: Release geolocation by the backend
+                    console.log('GeoLocation API not supported');
+                }
+                // Set external user IP to local storage
+                setUserIP();
+            });
         </script>
-
     </body>
     </html>
     """
-
 
 @router.post("/")
 def receive_location(location: Location):

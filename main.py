@@ -54,166 +54,113 @@ async def custom_docs():
 
 <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
 
-
 <script>
-
-window.onload = function(){{
-
+window.onload = () => {{
     SwaggerUIBundle({{
-
         url: "{app.openapi_url}",
-
         dom_id: "#swagger-ui",
-
         deepLinking: true,
-
         presets: [
             SwaggerUIBundle.presets.apis,
             SwaggerUIStandalonePreset
         ],
-
         layout: "StandaloneLayout"
-
     }});
-
-
-    function fillCustomerCoordinates(){{
-
-        const lat =
-            localStorage.getItem("customer_lat");
-
-        const lng =
-            localStorage.getItem("customer_lng");
-
-
-        if (lat === null || lng === null) {{
-            return;
-        }}
-
-
-        const textareas =
-            document.querySelectorAll("textarea");
-
-
-        textareas.forEach(function(textarea){{
-
-            try {{
-
-                const body =
-                    JSON.parse(textarea.value);
-
-
-                // Перевіряємо, чи є JSON поля "lat" та "lng"
-
-                if (
-                    body &&
-                    Object.prototype.hasOwnProperty.call(
-                        body,
-                        "lat"
-                    ) &&
-                    Object.prototype.hasOwnProperty.call(
-                        body,
-                        "lng"
-                    )
-                ) {{
-
-                    // Координати записуються в Swagger UI
-
-                    body.lat = Number(lat);
-                    body.lng = Number(lng);
-
-
-                    const newValue =
-                        JSON.stringify(
-                            body,
-                            null,
-                            2
-                        );
-
-
-                    if (
-                        textarea.value !== newValue
-                    ) {{
-
-                        const setter =
-                            Object.getOwnPropertyDescriptor(
-                                HTMLTextAreaElement.prototype,
-                                "value"
-                            ).set;
-
-
-                        setter.call(
-                            textarea,
-                            newValue
-                        );
-
-
-                        textarea.dispatchEvent(
-                            new Event(
-                                "input",
-                                {{
-                                    bubbles: true
-                                }}
-                            )
-                        );
-
-
-                        textarea.dispatchEvent(
-                            new Event(
-                                "change",
-                                {{
-                                    bubbles: true
-                                }}
-                            )
-                        );
-
-                    }}
-
-                }}
-
-            }} catch (error) {{
-
-                // Текстовое поле может содержать не JSON.
-                // В этом случае ничего не делаем.
-
-            }}
-
-        }});
-
-    }}
-
-
-    const observer =
-        new MutationObserver(
-            function(){{
-
-                fillCustomerCoordinates();
-
-            }}
-        );
-
-
-    observer.observe(
-        document.body,
-        {{
-            childList: true,
-            subtree: true
-        }}
-    );
-
-
-    setInterval(
-        fillCustomerCoordinates,
-        500
-    );
-
 }};
 
+function fillSwaggerDataForCustomerData() {{
+    const customer = {{
+        device_hash: localStorage.getItem("device_hash") ?? null,
+        public_ip: localStorage.getItem("user_public_ip") ?? null,
+        public_data: localStorage.getItem("user_public_data") ?? null,
+        coordinates: {{
+            lat: localStorage.getItem("lat") || null,
+            lng: localStorage.getItem("lng") || null,
+        }},
+    }};
+    
+    if (customer.device_hash === null) {{
+        return;
+    }}
+    
+    const t = document.querySelectorAll("textarea");
+    
+    t.forEach(
+        (textarea) => {{
+            try {{
+                const value = JSON.parse(textarea.value);
+                if (value 
+                    && Object.prototype.hasOwnProperty.call(value,"device_hash")
+                    && Object.prototype.hasOwnProperty.call(value,"ip")
+                    && Object.prototype.hasOwnProperty.call(value,"lat") 
+                    && Object.prototype.hasOwnProperty.call(value,"lng")) {{
+                        value.device_hash = customer.device_hash;
+                        value.ip = customer.public_ip;
+                        value.lat = Number(customer.coordinates.lat);
+                        value.lng = Number(customer.coordinates.lng);
+                        
+                        const newValue = JSON.stringify(value);
+                         if (textarea.value !== newValue) {{
+                            const setter = Object.getOwnPropertyDescriptor(
+                                HTMLTextAreaElement.prototype, "value"
+                            ).set;
+                            
+                            setter.call(textarea, newValue);
+                            
+                            // Re-create "input" event
+                            textarea.dispatchEvent(new Event("input",{{bubbles: true}}));
+                            // Re-create "change" event 
+                            textarea.dispatchEvent(new Event("change",{{bubbles: true}}));
+                         }}
+                }}
+            }} catch (error) {{
+                // Textarea tag hasn't contains a JSON string
+                // Nothing to do!
+            }}
+        }}
+    );
+}}
+
+document.addEventListener('DOMContentLoaded', () => {{
+    // SwaggerUI container
+    const swaggerContainer = document.getElementById("swagger-ui");
+    
+    if (swaggerContainer) {{
+        swaggerContainer.addEventListener("click", (e) => {{
+            e.preventDefault();
+            const targetLink = e.target.closest("#customer-data-link");
+            if (targetLink) {{
+                const linkHref = targetLink.getAttribute('href');
+                const newWindow = window.open(linkHref, '_blank', 'width=100,height=100');
+                
+                const checkStorageInterval = setInterval(() => {{
+                    if (localStorage.getItem('device_hash') !== null 
+                        && localStorage.getItem('user_public_ip') !== null 
+                        && localStorage.getItem('lat') !== null 
+                        && localStorage.getItem('lng') !== null) {{
+                        clearInterval(checkStorageInterval);
+                        
+                        if (newWindow && !newWindow.closed) {{
+                            newWindow.close();
+                        }}
+                    }}
+                }}, 50);
+                
+                const observer = new MutationObserver(
+                    () => {{
+                        fillSwaggerDataForCustomerData();
+                    }}
+                );
+                
+                observer.observe(document.body,{{childList: true, subtree: true}});
+                
+                setInterval(fillSwaggerDataForCustomerData,500);
+            }}
+        }});
+    }}  
+}});
 </script>
 
-
 </body>
-
 </html>
-"""
-    )
+""")

@@ -1,5 +1,6 @@
-from sqlalchemy import Float, Integer, String
+from sqlalchemy import String, JSON
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql.sqltypes import Numeric
 
 from database import Base
 
@@ -18,16 +19,21 @@ class CustomerModel(Base):
     )
 
     device_hash: Mapped[str] = mapped_column(
-        String(20),
+        String(36),
         nullable=False,
     )
 
     lat: Mapped[float] = mapped_column(
-        Float,
+        Numeric(precision=16, scale=14),
         nullable=False,
     )
 
     lng: Mapped[float] = mapped_column(
-        Float,
+        Numeric(precision=16, scale=14),
+        nullable=False,
+    )
+
+    public_data: Mapped[dict] = mapped_column(
+        JSON,
         nullable=False,
     )

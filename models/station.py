@@ -10,6 +10,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql.sqltypes import Numeric
 
 from database import Base
 
@@ -39,12 +40,12 @@ class StationModel(Base):
     )
 
     latitude: Mapped[float | None] = mapped_column(
-        Float,
+        Numeric(precision=16, scale=14),
         nullable=True
     )
 
     longitude: Mapped[float | None] = mapped_column(
-        Float,
+        Numeric(precision=16, scale=14),
         nullable=True
     )
 
