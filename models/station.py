@@ -1,4 +1,5 @@
 from datetime import datetime
+from math import radians, sin, cos, sqrt, atan2
 
 from sqlalchemy import (
     String,
@@ -13,6 +14,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql.sqltypes import Numeric
 
 from database import Base
+
+from models.station_service import StationServiceModel
 
 
 class StationModel(Base):
@@ -124,6 +127,72 @@ class StationModel(Base):
         return session.query(
             StationModel
         ).all()
+
+    @staticmethod
+    def read_nearest_stations(
+            session,
+            lat: float,
+            lng: float,
+            limit: int = 5
+    ):
+        stations = session.query(
+            StationModel
+        ).filter(
+            StationModel.latitude.is_not(None),
+            StationModel.longitude.is_not(None)
+        ).all()
+
+        earth_radius = 6371
+
+        result = []
+
+        for station in stations:
+            station_lat = float(station.latitude)
+            station_lng = float(station.longitude)
+
+            lat1 = radians(lat)
+            lng1 = radians(lng)
+            lat2 = radians(station_lat)
+            lng2 = radians(station_lng)
+
+            dlat = lat2 - lat1
+            dlng = lng2 - lng1
+
+            a = (
+                    sin(dlat / 2) ** 2
+                    + cos(lat1)
+                    * cos(lat2)
+                    * sin(dlng / 2) ** 2
+            )
+
+            c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+            distance = earth_radius * c
+
+            services = session.query(
+                StationServiceModel.name
+            ).filter(
+                StationServiceModel.station_id == station.id
+            ).all()
+
+            result.append(
+                {
+                    "id": station.id,
+                    "name": station.name,
+                    "address": station.address,
+                    "latitude": station.latitude,
+                    "longitude": station.longitude,
+                    "distance_km": round(distance, 2),
+                    "services": [
+                        service.name
+                        for service in services
+                    ],
+                }
+            )
+
+        result.sort(key=lambda station: station["distance_km"])
+
+        return result[:limit]
 
     @staticmethod
     def update_station(

@@ -55,6 +55,7 @@ async def custom_docs():
 <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
 
 <script>
+
 window.onload = () => {{
     SwaggerUIBundle({{
         url: "{app.openapi_url}",
@@ -121,44 +122,100 @@ function fillSwaggerDataForCustomerData() {{
     );
 }}
 
+
+function setInputValue(input, value) {{
+    const setter =
+        Object.getOwnPropertyDescriptor(
+            HTMLInputElement.prototype,
+            "value"
+        ).set;
+
+    setter.call(input, value);
+
+    input.dispatchEvent(
+        new Event("input", {{ bubbles: true }})
+    );
+
+    input.dispatchEvent(
+        new Event("change", {{ bubbles: true }})
+    );
+}}
+
+function fillNearestStationsParameters() {{
+    const lat = localStorage.getItem("lat");
+    const lng = localStorage.getItem("lng");
+
+    if (lat === null || lng === null) {{
+        return;
+    }}
+
+    const latInput =
+        document.querySelector('input[placeholder="lat"]');
+
+    const lngInput =
+        document.querySelector('input[placeholder="lng"]');
+
+    if (latInput && latInput.value !== lat) {{
+        setInputValue(latInput, lat);
+    }}
+
+    if (lngInput && lngInput.value !== lng) {{
+        setInputValue(lngInput, lng);
+    }}
+}}
+
 document.addEventListener('DOMContentLoaded', () => {{
-    // SwaggerUI container
     const swaggerContainer = document.getElementById("swagger-ui");
-    
+
     if (swaggerContainer) {{
         swaggerContainer.addEventListener("click", (e) => {{
-            e.preventDefault();
             const targetLink = e.target.closest("#customer-data-link");
+
             if (targetLink) {{
-                const linkHref = targetLink.getAttribute('href');
-                const newWindow = window.open(linkHref, '_blank', 'width=100,height=100');
-                
+                e.preventDefault();
+
+                const linkHref = targetLink.getAttribute("href");
+
+                const newWindow = window.open(
+                    linkHref,
+                    "_blank",
+                    "width=100,height=100"
+                );
+
                 const checkStorageInterval = setInterval(() => {{
-                    if (localStorage.getItem('device_hash') !== null 
-                        && localStorage.getItem('user_public_ip') !== null 
-                        && localStorage.getItem('lat') !== null 
-                        && localStorage.getItem('lng') !== null) {{
+                    if (
+                        localStorage.getItem("device_hash") !== null &&
+                        localStorage.getItem("user_public_ip") !== null &&
+                        localStorage.getItem("lat") !== null &&
+                        localStorage.getItem("lng") !== null
+                    ) {{
                         clearInterval(checkStorageInterval);
-                        
+
                         if (newWindow && !newWindow.closed) {{
                             newWindow.close();
                         }}
                     }}
                 }}, 50);
-                
-                const observer = new MutationObserver(
-                    () => {{
-                        fillSwaggerDataForCustomerData();
-                    }}
-                );
-                
-                observer.observe(document.body,{{childList: true, subtree: true}});
-                
-                setInterval(fillSwaggerDataForCustomerData,500);
             }}
         }});
-    }}  
+    }}
+
+    // Следим за динамически создаваемыми элементами Swagger
+    const observer = new MutationObserver(() => {{
+        fillSwaggerDataForCustomerData();
+        fillNearestStationsParameters();
+    }});
+
+    observer.observe(document.body, {{
+        childList: true,
+        subtree: true
+    }});
+
+    // Проверяем сразу
+    fillSwaggerDataForCustomerData();
+    fillNearestStationsParameters();
 }});
+
 </script>
 
 </body>

@@ -41,6 +41,29 @@ def add_station(
         )
 
 
+@router.get("/")
+def get_stations(
+        session: Session = Depends(get_session)
+):
+    return StationModel.read_stations(
+        session=session
+    )
+
+
+@router.get("/nearest")
+def get_nearest_stations(
+        lat: float,
+        lng: float,
+        session: Session = Depends(get_session)
+):
+    return StationModel.read_nearest_stations(
+        session=session,
+        lat=lat,
+        lng=lng,
+        limit=5
+    )
+
+
 @router.get("/{station_id}")
 def get_station(
         station_id: int,
@@ -58,15 +81,6 @@ def get_station(
         )
 
     return station
-
-
-@router.get("/")
-def get_stations(
-        session: Session = Depends(get_session)
-):
-    return StationModel.read_stations(
-        session=session
-    )
 
 
 @router.put(
