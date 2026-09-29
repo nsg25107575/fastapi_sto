@@ -1,65 +1,66 @@
 from datetime import datetime
-
 from sqlalchemy import DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column
-
-from database import Base
-
+from sqlalchemy.orm import Mapped, mapped_column, Session
+from auth.password import get_password_hash
+from database.engine import Base
 
 class UserModel(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(
-        primary_key=True,
-        autoincrement=True,
-    )
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
 
-    email: Mapped[str] = mapped_column(
-        String(100),
-        unique=True,
-        nullable=False,
-    )
+    # Use `DateTime(timezone=True)` to synchronize with the application's server time.
+    email_verified: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    email_verified: Mapped[datetime | None] = mapped_column(
-        DateTime,
-        nullable=True,
-        server_default=None,
-    )
-
-    first_name: Mapped[str | None] = mapped_column(
-        String(100),
-        nullable=True,
-    )
-
-    second_name: Mapped[str | None] = mapped_column(
-        String(100),
-        nullable=True,
-    )
-
-    last_name: Mapped[str | None] = mapped_column(
-        String(100),
-        nullable=True,
-    )
-
-    password: Mapped[str] = mapped_column(
-        String(255),
-        nullable=False,
-    )
+    first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    second_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    password: Mapped[str] = mapped_column(String(256), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        server_default="CURRENT_TIMESTAMP",
+        DateTime(timezone=True), nullable=False, server_default="CURRENT_TIMESTAMP"
     )
-
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        server_default="CURRENT_TIMESTAMP",
+        DateTime(timezone=True), nullable=False, server_default="CURRENT_TIMESTAMP"
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    deleted_at: Mapped[datetime | None] = mapped_column(
-        DateTime,
-        nullable=True,
-        server_default=None,
-    )
+    @classmethod
+    def get_user_by_email(cls, email: str, session: Session) -> "UserModel | None":
+        """
+        Searches for a user by email within the provided session.
+        :param email: Email of the user
+        :param session: Session
+        """
+        return session.query(cls).filter(cls.email == email).first()
+
+    @classmethod
+    def create_user(
+            cls,
+            email: str,
+            password: str,
+            first_name: str | None,
+            second_name: str | None,
+            last_name: str | None,
+            session: Session
+    ) -> "UserModel":
+        """
+        Creates a user object and adds it to the current session transaction.
+        :param email: Email of the user
+        :param password: Password of the user
+        :param first_name: First name of the user
+        :param second_name: Second name of the user
+        :param last_name: Last name of the user
+        :param session: Session
+        """
+        new_user = cls(
+            email=email,
+            password=get_password_hash(password),
+            first_name=first_name,
+            second_name=second_name,
+            last_name=last_name
+        )
+        session.add(new_user)
+        session.flush()  # Generates an ID for the user in the database but doesn't commit the transaction.
+        return new_user

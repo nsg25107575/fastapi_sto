@@ -1,17 +1,21 @@
-from pwdlib import PasswordHash
+from passlib.context import CryptContext
 
-password_hash = PasswordHash.recommended()
-
-
-def hash_password(password: str) -> str:
-    return password_hash.hash(password)
+# Context
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def verify_password(
-        plain_password: str,
-        hashed_password: str
-) -> bool:
-    return password_hash.verify(
-        plain_password,
-        hashed_password
-    )
+def get_password_hash(password: str) -> str:
+    """
+    Generates a secure hash (salt + hash) for storage in the database during registration.
+    :param password: str
+    """
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Checks whether the entered plaintext password matches the hash from the database.
+    :param plain_password: str
+    :param hashed_password: str
+    """
+    return pwd_context.verify(plain_password, hashed_password)

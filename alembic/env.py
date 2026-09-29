@@ -1,25 +1,11 @@
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
-from alembic import context
-
 from config import Config
-from database import Base
-
-from models.station import StationModel
-from models.vehicle import VehicleModel
-from models.user import UserModel
-from models.customer import CustomerModel
-
-from models.token import TokenModel
-from models.station_service import StationServiceModel
-from models.station_role import StationRoleModel
-from models.station_customer import StationCustomerModel
-from models.station_contact import StationContactModel
-from models.station_user import StationUserModel
-from models.station_work_schedule import StationWorkScheduleModel
+from database.engine import Base
 
 config = context.config
 

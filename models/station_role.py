@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import String, Text, DateTime, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from database import Base
+from database.engine import Base
 
 
 class StationRoleModel(Base):

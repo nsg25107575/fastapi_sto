@@ -1,9 +1,9 @@
 from datetime import datetime
 
-from sqlalchemy import String, Float, DateTime, ForeignKey, Index, text
+from sqlalchemy import String, DateTime, ForeignKey, Index, text, Numeric
 from sqlalchemy.orm import Mapped, mapped_column
 
-from database import Base
+from database.engine import Base
 
 
 class StationServiceModel(Base):
@@ -20,12 +20,12 @@ class StationServiceModel(Base):
     )
 
     name: Mapped[str] = mapped_column(
-        String(100),
+        String(200),
         nullable=False
     )
 
-    price: Mapped[float] = mapped_column(
-        Float,
+    price: Mapped[float | None] = mapped_column(
+        Numeric(precision=12, scale=2),
         nullable=True
     )
 

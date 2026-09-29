@@ -3,8 +3,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from database.engine import get_session
 from main import app
-from routers.stations import get_session
 
 TEST_DATABASE_URL = (
     "mariadb+mariadbconnector://"

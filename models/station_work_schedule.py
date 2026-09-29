@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from database import Base
+from database.engine import Base
 
 
 class StationWorkScheduleModel(Base):

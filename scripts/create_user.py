@@ -1,33 +1,25 @@
-from database import SessionLocal
+import argparse
+
 from models.user import UserModel
-from auth.password import hash_password
 
 
-def create_user():
-    session = SessionLocal()
-
-    try:
-        user = UserModel(
-            email="admin@example.com",
-            password=hash_password("admin123"),
-            first_name="Admin",
-            second_name=None,
-            last_name=None,
-        )
-
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-
-        print(f"User created: id={user.id}, email={user.email}")
-
-    except Exception:
-        session.rollback()
-        raise
-
-    finally:
-        session.close()
+def create_user(mail, pwd, n):
+    return UserModel.create_user(mail, pwd, n, None, None)
 
 
 if __name__ == "__main__":
-    create_user()
+    parser = argparse.ArgumentParser(description="Add user script")
+
+    parser.add_argument("-e", "--email", type=str, required=True, help="User email")
+    parser.add_argument("-p", "--pwd", type=str, required=True, help="User password")
+    parser.add_argument("-n", "--name", type=str, required=True, help="User name")
+
+    args = parser.parse_args()
+
+    email = args.email
+    password = args.pwd
+    first_name = args.name
+
+    user, access_token = create_user(email, password, first_name)
+    if user:
+        print(user.first_name, user.email, user.first_name)

@@ -23,7 +23,7 @@ def upgrade() -> None:
     op.create_table('tokens',
         sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
         sa.Column('user_id', sa.Integer(), nullable=False),
-        sa.Column('token', sa.String(length=255), nullable=False),
+        sa.Column('token', sa.String(length=512), nullable=False),
         sa.Column('expires_at', sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
         sa.PrimaryKeyConstraint('id'),

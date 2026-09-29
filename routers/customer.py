@@ -4,23 +4,14 @@ import string
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
-from database import SessionLocal
+from database.engine import get_session
 from models.customer import CustomerModel
-from schemas.customer import CustomerCreate, CustomerResponse
+from validation.customer import CustomerCreate, CustomerResponse
 
 router = APIRouter(
     prefix="/customer",
     tags=["Customer"],
 )
-
-
-def get_session():
-    session = SessionLocal()
-
-    try:
-        yield session
-    finally:
-        session.close()
 
 
 def generate_device_hash(length: int = 36) -> str:

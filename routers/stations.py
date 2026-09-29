@@ -1,133 +1,98 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
-from database import SessionLocal
+from auth.dependencies import get_current_user, get_session
+from config import Config
+from exceptions import DuplicateStationException, InvalidCoordinateException, StationNotFoundException
 from models.station import StationModel
-from auth.dependencies import get_current_user
+from models.user import UserModel
+from validation.station import StationCreateSchema, StationUpdateSchema, StationResponseSchema, \
+    NearestStationResponseSchema
 
-router = APIRouter()
-
-
-def get_session():
-    session = SessionLocal()
-
-    try:
-        yield session
-    finally:
-        session.close()
-
-
-@router.post(
-    "/",
-    dependencies=[Depends(get_current_user)]
+router = APIRouter(
+    prefix="/stations",
+    tags=["Stations"]
 )
+
+
+@router.post("/", response_model=StationResponseSchema, status_code=status.HTTP_201_CREATED)
 def add_station(
-        name: str,
-        address: str,
+        payload: StationCreateSchema,
+        current_user: UserModel = Depends(get_current_user),
         session: Session = Depends(get_session)
 ):
     try:
-        return StationModel.create_station(
+        station = StationModel.create_station(
             session=session,
-            name=name,
-            address=address
+            name=payload.name,
+            address=payload.address
         )
-
+        session.commit()
+        return station
     except IntegrityError:
-        raise HTTPException(
-            status_code=409,
-            detail="Станция с таким названием и адресом уже существует"
-        )
+        session.rollback()
+        raise DuplicateStationException
 
 
-@router.get("/")
-def get_stations(
-        session: Session = Depends(get_session)
-):
-    return StationModel.read_stations(
-        session=session
-    )
+@router.get("/", response_model=list[StationResponseSchema], status_code=status.HTTP_200_OK)
+def get_stations(session: Session = Depends(get_session)):
+    return StationModel.read_stations(session=session)
 
 
-@router.get("/nearest")
-def get_nearest_stations(
-        lat: float,
-        lng: float,
-        session: Session = Depends(get_session)
-):
+@router.get("/nearest", response_model=list[NearestStationResponseSchema])
+def get_nearest_stations(lat: float, lng: float, session: Session = Depends(get_session)) -> list[StationModel]:
+    if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
+        raise InvalidCoordinateException
     return StationModel.read_nearest_stations(
-        session=session,
-        lat=lat,
-        lng=lng,
-        limit=5
+        session=session, lat=lat, lng=lng,
+        limit=Config.app_nearest_stations_limit
     )
 
 
-@router.get("/{station_id}")
-def get_station(
-        station_id: int,
-        session: Session = Depends(get_session)
-):
-    station = StationModel.read_station(
-        session=session,
-        station_id=station_id
-    )
-
+@router.get("/{station_id}", response_model=StationResponseSchema)
+def get_station(station_id: int, session: Session = Depends(get_session)):
+    station = StationModel.read_station(session=session, station_id=station_id)
     if station is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Станция не найдена"
-        )
-
+        raise StationNotFoundException
     return station
 
 
-@router.put(
-    "/{station_id}",
-    dependencies=[Depends(get_current_user)]
-)
+@router.put("/{station_id}", response_model=StationResponseSchema)
 def update_station(
         station_id: int,
-        name: str | None = None,
-        address: str | None = None,
-        active: bool | None = None,
+        payload: StationUpdateSchema,
+        current_user: UserModel = Depends(get_current_user),
         session: Session = Depends(get_session)
 ):
-    station = StationModel.update_station(
-        session=session,
-        station_id=station_id,
-        name=name,
-        address=address,
-        active=active
-    )
-
-    if station is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Станция не найдена"
+    try:
+        # Pass a dictionary with parameters via **kwargs
+        station = StationModel.update_station(
+            session=session,
+            station_id=station_id,
+            **payload.model_dump(exclude_none=True)  # Uses dynamic updates from model
         )
 
-    return station
+        if station is None:
+            raise StationNotFoundException
+
+        session.commit()
+        return station
+    except IntegrityError:
+        session.rollback()
+        raise DuplicateStationException
 
 
-@router.delete(
-    "/{station_id}",
-    dependencies=[Depends(get_current_user)]
-)
+@router.delete("/{station_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT)
 def delete_station(
         station_id: int,
+        current_user: UserModel = Depends(get_current_user),
         session: Session = Depends(get_session)
 ):
-    station = StationModel.delete_station(
-        session=session,
-        station_id=station_id
-    )
+    station = StationModel.delete_station(session=session, station_id=station_id)
 
     if station is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Станция не найдена"
-        )
+        raise StationNotFoundException
 
-    return station
+    session.commit()
+    return None

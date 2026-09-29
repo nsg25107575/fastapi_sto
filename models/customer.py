@@ -2,7 +2,7 @@ from sqlalchemy import String, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql.sqltypes import Numeric
 
-from database import Base
+from database.engine import Base
 
 
 class CustomerModel(Base):

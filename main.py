@@ -1,9 +1,10 @@
 from dotenv import load_dotenv
 
+import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
-from routers import stations
+from routers import stations, service
 from routers.auth import router as auth_router
 from routers.customer import router as customer_router
 from routers.location import router as location_router
@@ -16,7 +17,14 @@ app = FastAPI(
 
 app.include_router(
     stations.router,
-    prefix="/stations"
+    prefix="/stations",
+    tags=["Stations"]
+)
+
+app.include_router(
+    service.router,
+    prefix="/services",
+    tags=["Services"]
 )
 
 app.include_router(auth_router)
@@ -221,3 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {{
 </body>
 </html>
 """)
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

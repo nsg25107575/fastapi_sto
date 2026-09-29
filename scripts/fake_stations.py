@@ -1,6 +1,6 @@
 import random
 
-from database import SessionLocal
+from database.engine import SessionLocal
 from models.station import StationModel
 
 USER_LATITUDE = 48.49689099250345
