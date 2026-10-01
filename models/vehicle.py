@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from database.engine import Base
 
@@ -19,7 +19,6 @@ class FuelTypeModel(Base):
         nullable=False,
         unique=True
     )
-
 
 class VehicleModel(Base):
     __tablename__ = "vehicles"

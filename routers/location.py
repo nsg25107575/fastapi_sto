@@ -7,11 +7,9 @@ router = APIRouter(
     tags=["Location"]
 )
 
-
 class Location(BaseModel):
     lat: float
     lng: float
-
 
 @router.get("/", response_class=HTMLResponse)
 def location_page():

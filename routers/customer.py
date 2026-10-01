@@ -13,11 +13,9 @@ router = APIRouter(
     tags=["Customer"],
 )
 
-
 def generate_device_hash(length: int = 36) -> str:
     characters = string.ascii_letters + string.digits
     return "".join(secrets.choice(characters) for _ in range(length))
-
 
 @router.post(
     "/",

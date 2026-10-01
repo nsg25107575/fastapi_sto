@@ -126,13 +126,11 @@ class StationModel(Base):
         return result[:limit]
 
     @classmethod
-    def update_station(cls, session: Session, station_id: int, **kwargs) -> "StationModel | None":
+    def update_station(cls, session: Session, station_id: int, **kwargs) -> "StationModel":
         """
         Update the station with the given ID using the provided fields.
         """
         station = session.get(cls, station_id)
-        if station is None:
-            return None
 
         for key, value in kwargs.items():
             if value is not None:

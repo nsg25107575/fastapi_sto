@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from database.engine import SessionLocal, get_session
-from models.station_service import StationServiceModel
 from auth.dependencies import get_current_user
+from database.engine import get_session
+from models.station_service import StationServiceModel
 
 router = APIRouter()
 
@@ -30,7 +30,6 @@ def add_service(
     session.refresh(service)
 
     return service
-
 
 def update_service(
         session: Session,
@@ -57,7 +56,6 @@ def update_service(
 
     return service
 
-
 def delete_service(
         session: Session,
         service_id: int
@@ -75,7 +73,6 @@ def delete_service(
 
     return service_id
 
-
 def get_service(
         session: Session,
         service_id: int
@@ -84,7 +81,6 @@ def get_service(
         StationServiceModel,
         service_id
     )
-
 
 def get_services(session: Session):
     rows = session.query(
@@ -105,7 +101,6 @@ def get_services(session: Session):
         }
         for row in rows
     ]
-
 
 # =========================
 # FastAPI endpoints
@@ -128,7 +123,6 @@ def create_service(
         price=price
     )
 
-
 @router.get("/")
 def read_services(
         session: Session = Depends(get_session)
@@ -136,7 +130,6 @@ def read_services(
     return get_services(
         session=session
     )
-
 
 @router.get("/{service_id}")
 def read_service(
@@ -155,7 +148,6 @@ def read_service(
         )
 
     return service
-
 
 @router.put(
     "/{service_id}",
@@ -181,7 +173,6 @@ def edit_service(
         )
 
     return service
-
 
 @router.delete(
     "/{service_id}",

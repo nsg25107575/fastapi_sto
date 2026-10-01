@@ -15,7 +15,6 @@ def get_default_expiry():
     tz = ZoneInfo(Config.app_timezone)
     return datetime.now(tz) + timedelta(days=7)
 
-
 class TokenModel(Base):
     __tablename__ = "tokens"
 

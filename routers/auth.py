@@ -20,7 +20,6 @@ router = APIRouter(
     tags=["Auth"]
 )
 
-
 @router.post("/sign-up", response_model=None, status_code=status.HTTP_201_CREATED)
 def sign_up(credentials: UserCreateSchema) -> JSONResponse:
     # Opening a single session for an atomic transaction.
@@ -68,7 +67,6 @@ def sign_up(credentials: UserCreateSchema) -> JSONResponse:
         except IntegrityError:
             session.rollback()  # Rollback database changes if the email is already taken
             raise DuplicateEmailException
-
 
 @router.post("/sign-in", response_model=None, status_code=status.HTTP_202_ACCEPTED)
 def sign_in(credentials: UserLoginSchema) -> JSONResponse:
@@ -138,7 +136,6 @@ def sign_out(request: Request) -> JSONResponse:
     )
 
     return response
-
 
 @router.get("/me")
 def get_current_user(current_user: UserModel = Depends(manager)) -> JSONResponse:

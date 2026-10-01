@@ -15,7 +15,6 @@ router = APIRouter(
     tags=["Stations"]
 )
 
-
 @router.post("/", response_model=StationResponseSchema, status_code=status.HTTP_201_CREATED)
 def add_station(
         payload: StationCreateSchema,

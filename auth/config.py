@@ -29,7 +29,6 @@ COOKIE_PARAMS = {
     "secure": Config.cookie_secure,
 }
 
-
 @manager.user_loader
 def load_user(email: str):
     with Session(engine) as session:
