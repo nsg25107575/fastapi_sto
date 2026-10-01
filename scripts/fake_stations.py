@@ -12,7 +12,6 @@ COORDINATE_OFFSET = 5
 
 def create_fake_stations():
     session = SessionLocal()
-
     try:
         for i in range(1, FAKE_STATIONS_COUNT + 1):
             latitude = USER_LATITUDE + random.uniform(
