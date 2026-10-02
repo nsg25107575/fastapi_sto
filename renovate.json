@@ -1,0 +1,19 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Kyiv",
+  "schedule": ["every weekend"],
+  "pip_requirements": {
+    "fileMatch": ["^requirements\\.txt$"]
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["pep621", "pip_requirements"],
+      "groupName": "Python dependencies",
+      "rangeStrategy": "pin"
+    }
+  ],
+  "postUpdateOptions": ["pipCompile"],
+  "prConcurrentLimit": 5,
+  "labels": ["dependencies"]
+}
