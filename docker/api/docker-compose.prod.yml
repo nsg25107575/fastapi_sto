@@ -26,10 +26,18 @@
 # wrong container). Fix: address the database by its container_name
 # (kws_station_db), which stays globally unique across every network
 # this host runs — unlike the generic service name "db".
+#
+# IMPORTANT — credentials in DATABASE_URL: the base docker-compose.yml
+# builds this URL as "mariadb+mariadbconnector://db:PORT/NAME" with no
+# user/password — relying on the driver's own default (root, no
+# password), which only works for local dev where MariaDB has lax
+# auth. The override below adds explicit "${DB_USER}:${DB_PASSWORD}@"
+# because production MariaDB requires real credentials; omitting them
+# caused "Access denied for user ''root''@''...''" on this host.
 services:
   api:
     environment:
-      DATABASE_URL: "mariadb+mariadbconnector://kws_station_db:${DB_PORT:-3306}/${DB_NAME}"
+      DATABASE_URL: "mariadb+mariadbconnector://${DB_USER}:${DB_PASSWORD}@kws_station_db:${DB_PORT:-3306}/${DB_NAME}"
       DB_HOST: kws_station_db
     networks:
       - kws_station_net
