@@ -2,18 +2,20 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from auth.dependencies import get_current_user, get_session
+from auth.dependencies import get_current_user
 from config import Config
+from database.engine import get_session
 from exceptions import DuplicateStationException, InvalidCoordinateException, StationNotFoundException
 from models.station import StationModel
 from models.user import UserModel
 from validation.station import StationCreateSchema, StationUpdateSchema, StationResponseSchema, \
-    NearestStationResponseSchema
+    NearestStationResponseSchema, NearestStationsSchema
 
 router = APIRouter(
     prefix="/stations",
     tags=["Stations"]
 )
+
 
 @router.post("/", response_model=StationResponseSchema, status_code=status.HTTP_201_CREATED)
 def add_station(
@@ -24,6 +26,7 @@ def add_station(
     try:
         station = StationModel.create_station(
             session=session,
+            user_id=current_user.id,
             name=payload.name,
             address=payload.address
         )
@@ -40,11 +43,15 @@ def get_stations(session: Session = Depends(get_session)):
 
 
 @router.get("/nearest", response_model=list[NearestStationResponseSchema])
-def get_nearest_stations(lat: float, lng: float, session: Session = Depends(get_session)) -> list[StationModel]:
-    if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
+def get_nearest_stations(
+        coordinates: NearestStationsSchema,
+        session: Session = Depends(get_session)
+) -> list[StationModel]:
+    if not (-90 <= coordinates.lat <= 90) or not (-180 <= coordinates.lng <= 180):
         raise InvalidCoordinateException
+
     return StationModel.read_nearest_stations(
-        session=session, lat=lat, lng=lng,
+        session=session, lat=coordinates.lat, lng=coordinates.lng,
         limit=Config.app_nearest_stations_limit
     )
 

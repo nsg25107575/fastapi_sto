@@ -2,6 +2,7 @@ import random
 
 from database.engine import SessionLocal
 from models.station import StationModel
+from models.user import UserModel
 
 USER_LATITUDE = 48.49689099250345
 USER_LONGITUDE = 32.23869921769066
@@ -24,7 +25,23 @@ def create_fake_stations():
                 COORDINATE_OFFSET,
             )
 
+            # Create or get user for creating station
+            user = UserModel.get_user_by_email(
+                email=f"fake_user@example.com",
+                session=session
+            )
+            if user is None:
+                user = UserModel.create_user(
+                    email="fake_user@example.com",
+                    password="password",
+                    first_name="fake_first_name",
+                    second_name="fake_second_name",
+                    last_name="fake_last_name",
+                    session=session
+                )
+
             station = StationModel(
+                user_id=user.id,
                 name=f"Fake STO {i}",
                 address=f"Fake address {i}",
                 latitude=latitude,

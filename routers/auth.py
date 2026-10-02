@@ -1,12 +1,10 @@
-from datetime import timedelta
-
 from fastapi import APIRouter, Request, status, Depends
 from fastapi_login.exceptions import InvalidCredentialsException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 
-from auth.config import manager, MAX_COOKIE_AGE_IN_DAYS, COOKIE_PARAMS
+from auth.config import manager, COOKIE_PARAMS
 from auth.password import verify_password
 from config import Config
 from database.engine import engine
@@ -19,6 +17,7 @@ router = APIRouter(
     prefix="/auth",
     tags=["Auth"]
 )
+
 
 @router.post("/sign-up", response_model=None, status_code=status.HTTP_201_CREATED)
 def sign_up(credentials: UserCreateSchema) -> JSONResponse:
@@ -60,13 +59,14 @@ def sign_up(credentials: UserCreateSchema) -> JSONResponse:
                 status_code=status.HTTP_201_CREATED
             )
 
-            max_age_secs = int(timedelta(days=MAX_COOKIE_AGE_IN_DAYS).total_seconds())
+            max_age_secs = int(Config.get_cookie_lifetime().total_seconds())
             response.set_cookie(value=access_token, max_age=max_age_secs, **COOKIE_PARAMS)
 
             return response
         except IntegrityError:
             session.rollback()  # Rollback database changes if the email is already taken
             raise DuplicateEmailException
+
 
 @router.post("/sign-in", response_model=None, status_code=status.HTTP_202_ACCEPTED)
 def sign_in(credentials: UserLoginSchema) -> JSONResponse:
@@ -96,7 +96,7 @@ def sign_in(credentials: UserLoginSchema) -> JSONResponse:
         )
 
         # Cookie integration: writing the token to the browser response
-        max_age_secs = int(timedelta(days=MAX_COOKIE_AGE_IN_DAYS).total_seconds())
+        max_age_secs = int(Config.get_cookie_lifetime().total_seconds())
         response.set_cookie(value=access_token, max_age=max_age_secs, **COOKIE_PARAMS)
 
         return response
@@ -136,6 +136,7 @@ def sign_out(request: Request) -> JSONResponse:
     )
 
     return response
+
 
 @router.get("/me")
 def get_current_user(current_user: UserModel = Depends(manager)) -> JSONResponse:

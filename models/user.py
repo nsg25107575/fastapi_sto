@@ -1,8 +1,14 @@
 from datetime import datetime
-from sqlalchemy import DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column, Session
+from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime, String, select
+from sqlalchemy.orm import Mapped, mapped_column, Session, relationship
+
 from auth.password import get_password_hash
 from database.engine import Base
+
+if TYPE_CHECKING:
+    from models.station import StationModel
 
 class UserModel(Base):
     __tablename__ = "users"
@@ -26,6 +32,12 @@ class UserModel(Base):
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Connection to the service model
+    stations: Mapped[list["StationModel"]] = relationship(
+        "StationModel",
+        back_populates="user",
+    )
+
     @classmethod
     def get_user_by_email(cls, email: str, session: Session) -> "UserModel | None":
         """
@@ -33,7 +45,8 @@ class UserModel(Base):
         :param email: Email of the user
         :param session: Session
         """
-        return session.query(cls).filter(cls.email == email).first()
+        stmt = select(cls).where(cls.email == email)
+        return session.scalars(stmt).first()
 
     @classmethod
     def create_user(

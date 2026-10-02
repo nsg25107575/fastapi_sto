@@ -10,8 +10,14 @@ class Base(DeclarativeBase):
     """
     pass
 
+
 engine = create_engine(Config.db_url)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+
 
 def get_session():
     """

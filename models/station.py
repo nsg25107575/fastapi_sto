@@ -1,18 +1,36 @@
 from datetime import datetime
-from math import radians, sin, cos, sqrt, atan2
+from math import radians
+from typing import Self
+from typing import TYPE_CHECKING
+from zoneinfo import ZoneInfo
 
-from sqlalchemy import String, Boolean, DateTime, Index, UniqueConstraint, text
-from sqlalchemy.orm import Mapped, mapped_column, Session
-from sqlalchemy.sql.sqltypes import Numeric
+from sqlalchemy import String, Boolean, DateTime, Index, UniqueConstraint, text, select, event, func, case, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, Session, with_loader_criteria, selectinload, relationship
+from sqlalchemy.sql.sqltypes import Numeric, Integer
 
 from config import Config
 from database.engine import Base
+from models.mixin import SoftDeleteMixin
+
+if TYPE_CHECKING:
+    from models.station_service import StationServiceModel
+    from models.user import UserModel
 
 
-class StationModel(Base):
+class StationModel(Base, SoftDeleteMixin):
+    """
+    # Bypassing the global filter using execution_options
+    all_stations = session.scalars(
+        select(StationModel).execution_options(include_deleted=True)
+    ).all()
+    # Record restoration (Restore)
+    station.deleted_at = None
+    station.commit()
+    """
     __tablename__ = "stations"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer(), ForeignKey("users.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     address: Mapped[str] = mapped_column(String(200), nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"))
@@ -27,127 +45,200 @@ class StationModel(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("name", "address", name="uq_station_name_per_address"),
-        Index("idx_station_name", "name"),
         Index("idx_station_address", "address"),
-        Index("idx_station_longitude_latitude", "longitude", "latitude"),
+        Index("idx_station_latitude_longitude", "latitude", "longitude"),
+        # Full-text index for fast search by title
+        Index("idx_station_name_fulltext", "name", mariadb_prefix="FULLTEXT")
+    )
+
+    # Connection to the service model
+    services: Mapped[list["StationServiceModel"]] = relationship(
+        "StationServiceModel",
+        back_populates="station",
+    )
+
+    # Connection to the user model
+    user: Mapped["UserModel"] = relationship(
+        "UserModel",
     )
 
     @classmethod
-    def create_station(cls, session: Session, name: str, address: str) -> "StationModel":
+    def search_stations_by_name(cls, session: Session, search_query: str, limit: int = 20):
+        """
+        Fast full-text search for stations by name.
+        Returns only active service stations that have not been soft-deleted.
+        """
+        if not search_query or len(search_query.strip()) < 3:
+            return []
+
+        # Constructing a query for Boolean Mode.
+        # Adding '*' allows searching by the beginning of a word (e.g., 'Auto*' will find 'Autoservice', 'Autotech').
+        formatted_query = f"{search_query.strip()}*"
+
+        # Constructing the SQL expression MATCH(name) AGAINST(:query IN BOOLEAN MODE)
+        match_expr = func.match(cls.name).against(formatted_query, text("IN BOOLEAN MODE"))
+
+        stmt = (
+            select(cls)
+            .where(
+                match_expr,
+                cls.active.is_(True)
+            )
+            .limit(limit)
+        )
+
+        return session.scalars(stmt).all()
+
+    @classmethod
+    def create_station(cls, session: Session, user_id: int, name: str, address: str) -> Self:
         """
         Create a new station and add it to the current database session.
         """
-        station = cls(name=name, address=address)
+        station = cls(user_id=user_id, name=name, address=address)
         session.add(station)
         session.flush()  # Generates an ID without saving (transaction management remains in the router)
+
         return station
 
     @classmethod
-    def read_station(cls, session: Session, station_id: int) -> "StationModel | None":
+    def read_station(cls, session: Session, station_id: int) -> Self | None:
         """
         Find the station by its ID. Returns None if the station does not exist.
         """
-        return session.get(cls, station_id)
+        stmt = select(cls).where(cls.id == station_id)
+        return session.scalars(stmt).first()
 
     @classmethod
     def read_stations(cls, session: Session):
         """
         Returns all stations from the database.
         """
-        return session.query(cls).all()
+        return session.scalars(select(cls)).all()
 
     @classmethod
     def read_nearest_stations(
             cls, session: Session, lat: float, lng: float,
             limit: int = Config.app_nearest_stations_limit
-    ):
+    ) -> list[Self]:
         """
-        Returns the nearest active stations to the specified coordinates.
+        Returns the nearest active stations along with their services,
+        calculating the distance on the database side.
         """
-        # Retrieving all stations
-        stations = session.query(cls).filter(
-            cls.latitude.is_not(None),
-            cls.longitude.is_not(None)
-        ).all()
-
-        if not stations:
-            return []
-
-        # N+1 Optimization: Retrieve ALL services for the found stations in a SINGLE request
-        station_ids = [s.id for s in stations]
-        services_query = text("""SELECT station_id, name, price
-                                 FROM station_services
-                                 WHERE station_id IN :ids
-                                 ORDER BY price DESC""")
-        services_result = session.execute(services_query, {"ids": tuple(station_ids)}).mappings().all()
-
-        # Group services by station ID into a standard dictionary
-        services_by_station = {}
-        for srv in services_result:
-            st_id = srv["station_id"]
-            if st_id not in services_by_station:
-                services_by_station[st_id] = []
-            services_by_station[st_id].append({"name": srv["name"], "price": srv["price"]})
-
+        # 1. Convert user coordinates to radians for SQL
+        rad_lat = radians(lat)
+        rad_lng = radians(lng)
         earth_radius = 6371
-        result = []
 
-        # Calculating distances (without database queries inside the loop)
-        for station in stations:
-            station_lat = float(station.latitude)
-            station_lng = float(station.longitude)
+        # Calculate the argument of the cosines
+        cos_expr = (
+                func.cos(rad_lat) * func.cos(func.radians(cls.latitude)) *
+                func.cos(func.radians(cls.longitude) - rad_lng) +
+                func.sin(rad_lat) * func.sin(func.radians(cls.latitude))
+        )
+        # Protection against NaN: if the value exceeds 1.0 due to an error, force it to 1.0.
+        # If it is less than -1.0, set it to -1.0
+        safe_cos_expr = case(
+            (cos_expr > 1.0, 1.0),
+            (cos_expr < -1.0, -1.0),
+            else_=cos_expr
+        )
 
-            lat1, lng1 = radians(lat), radians(lng)
-            lat2, lng2 = radians(station_lat), radians(station_lng)
+        # 2. Haversine / Cosine formula with safeguards
+        distance_expr = (earth_radius * func.acos(safe_cos_expr)).label("distance_km")
 
-            dlat = lat2 - lat1
-            dlng = lng2 - lng1
+        # 3. Database query (adding filters for active and non-deleted stations)
+        stmt = (
+            select(cls, distance_expr)
+            .where(
+                cls.latitude.is_not(None),
+                cls.longitude.is_not(None),
+                cls.active.is_(True)  # return only active ones
+            )
+            .options(selectinload(cls.services))
+            # sort by the alias or by the expression itself for reliability
+            .order_by(text("distance_km"))
+            .limit(limit)
+        )
 
-            a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlng / 2) ** 2
-            c = 2 * atan2(sqrt(a), sqrt(1 - a))
-            distance = earth_radius * c
+        # Fulfilling the request.
+        results = session.execute(stmt).all()
 
-            result.append({
+        # 4. Formulating the final result
+        final_result = []
+        for station, distance_km in results:
+            final_result.append({
                 "id": station.id,
                 "name": station.name,
                 "address": station.address,
                 "latitude": station.latitude,
                 "longitude": station.longitude,
-                "distance_km": round(distance, 2),
-                # Take the prepared data from our grouped dictionary (an empty list if there are no services)
-                "services": services_by_station.get(station.id, []),
+                "distance_km": round(distance_km, 2),
+                # Sorting services by price
+                "services": [
+                    {"name": srv.name, "price": srv.price}
+                    for srv in sorted(station.services, key=lambda s: s.price if s.price is not None else 0.0)
+                ]
             })
 
-        result.sort(key=lambda x: x["distance_km"])
-        return result[:limit]
+        return final_result
 
     @classmethod
-    def update_station(cls, session: Session, station_id: int, **kwargs) -> "StationModel":
+    def update_station(cls, session: Session, station_id: int, **kwargs) -> Self | None:
         """
         Update the station with the given ID using the provided fields.
         """
-        station = session.get(cls, station_id)
+        station = cls.read_station(session, station_id)
 
         for key, value in kwargs.items():
             if value is not None:
                 setattr(station, key, value)
 
         session.flush()
+
         return station
 
     @classmethod
     def delete_station(cls, session: Session, station_id: int) -> int | None:
         """
-        Delete a station by its ID.
+        Delete (by soft delete) a station by its ID.
         """
-        station = session.get(cls, station_id)
-        if station is None:
-            return None
+        station = cls.read_station(session, station_id)
 
-        session.delete(station)
+        tz = ZoneInfo(Config.app_timezone)
+        station.deleted_at = datetime.now(tz)
         session.flush()
+
         return station_id
+
+    @classmethod
+    def restore_station(cls, session: Session, station_id: int) -> Self | None:
+        """
+        Restore the station with the given ID.
+        """
+        station = cls.read_station(session, station_id)
+
+        if station is not None:
+            station.deleted_at = None
+            session.flush()
+        return station
+
+
+# Global Request Interceptor (Event Listener)
+@event.listens_for(Session, "do_orm_execute")
+def _add_soft_delete_filter(execute_state):
+    # Allows disabling the filter using .execution_options(include_deleted=True)
+    if execute_state.execution_options.get("include_deleted", False):
+        return
+    # Filtering SELECT queries: showing only those where deleted_at IS NULL
+    if execute_state.is_select:
+        execute_state.statement = execute_state.statement.options(
+            with_loader_criteria(
+                SoftDeleteMixin,
+                lambda cls: cls.deleted_at.is_(None),
+                include_aliases=True,
+                propagate_to_loaders=True
+            )
+        )

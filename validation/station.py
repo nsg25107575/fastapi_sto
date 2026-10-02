@@ -24,11 +24,17 @@ class StationUpdateSchema(BaseModel):
     active: bool | None = None
 
 
+class NearestStationsSchema(BaseModel):
+    lng: float
+    lat: float
+
+
 class NearestStationResponseSchema(BaseModel):
     id: int
     name: str
     address: str
-    active: bool
+    latitude: float
+    longitude: float
     distance_km: float
     services: list[ServiceResponseSchema] = []
 

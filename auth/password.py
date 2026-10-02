@@ -1,14 +1,20 @@
-from passlib.context import CryptContext
+import bcrypt
 
-# Context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def get_password_hash(password: str) -> str:
     """
     Generates a secure hash (salt + hash) for storage in the database during registration.
     :param password: str
     """
-    return pwd_context.hash(password)
+    # 1. Convert the password string to bytes
+    password_bytes = password.encode('utf-8')
+    # 2. Generate a salt and hash
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+
+    # 3. Return the string for saving to the database
+    return hashed.decode('utf-8')
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
@@ -16,4 +22,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     :param plain_password: str
     :param hashed_password: str
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode('utf-8'),
+            hashed_password.encode('utf-8')
+        )
+    except Exception:
+        return False

@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 class ServiceResponseSchema(BaseModel):
     name: str
-    price: float | None = None
+    price: float
 
     class Config:
         from_attributes = True

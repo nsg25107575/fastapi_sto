@@ -4,8 +4,11 @@ from alembic import context
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
+import models
 from config import Config
 from database.engine import Base
+
+all_models = models.__all__
 
 config = context.config
 
