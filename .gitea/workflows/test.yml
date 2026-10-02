@@ -64,11 +64,10 @@ jobs:
   # Runs only after `test` succeeds, and only on pushes to main. Deploys
   # over SSH directly on the host (NOT via the job container's Docker
   # socket) — deliberately avoiding the DooD path-resolution issue that
-  # broke the base docker-compose.yml's `.:/app` bind mount (see the
+  # affects the base docker-compose.yml's `.:/app` bind mount (see the
   # "Build & start stack" comment above). An SSH session runs commands
-  # in the host's real shell, in the real ~/kws_station_api directory,
-  # so `make up-build` there behaves exactly like it does when you run
-  # it manually.
+  # in the host's real shell, in the real repo directory, so the
+  # bind mount and relative paths behave exactly like a manual run.
   deploy:
     needs: test
     if: github.ref == 'refs/heads/main'
@@ -95,10 +94,16 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
+          # Uses BOTH compose files: the base file (local-dev friendly,
+          # no external deps) plus docker-compose.prod.yml, which adds
+          # the kws stack's external `kws_default` network so Nginx
+          # Proxy Manager can reach this container by name. The prod
+          # override is intentionally NOT merged into the base file —
+          # see docker-compose.prod.yml header comment for why.
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" "
             set -e
             cd '$DEPLOY_PATH'
             git fetch origin main
             git reset --hard origin/main
-            make up-build
+            docker compose -f docker/api/docker-compose.yml -f docker/api/docker-compose.prod.yml --project-directory . up -d --build
           "
