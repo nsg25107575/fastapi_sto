@@ -9,7 +9,11 @@ from models.token import TokenModel
 from models.user import UserModel
 
 
-@manager.user_loader
+# NOTE: `user_loader` is a factory that returns the actual decorator — it
+# MUST be called (`@manager.user_loader()`), otherwise `load_user` is
+# passed as a positional arg to the factory and `_user_callback` is never
+# set, breaking all authentication with "Missing user_loader callback".
+@manager.user_loader()
 def load_user(email: str):
     stmt = (
         select(UserModel)
