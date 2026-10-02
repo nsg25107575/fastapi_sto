@@ -6,6 +6,8 @@ set -e
 # 1. Waits for the database to accept connections (depends_on/healthcheck
 #    already handles most of this, but we double-check here so the
 #    entrypoint is safe even when run standalone).
+#    Also keeps pip up to date and ensures uv is available (dev tooling
+#    used by `make deps-update`, not an application dependency).
 # 2. Applies all pending Alembic migrations.
 # 3. Starts Uvicorn with the configured number of workers.
 
@@ -16,6 +18,10 @@ set -e
 : "${UVICORN_LIMIT_CONCURRENCY:=1000}"
 : "${UVICORN_BACKLOG:=2048}"
 : "${UVICORN_KEEPALIVE:=5}"
+
+echo "[entrypoint] Ensuring pip is up to date and uv is installed..."
+pip install --upgrade pip
+pip install uv
 
 echo "[entrypoint] Waiting for database at ${DB_HOST}:${DB_PORT}..."
 
