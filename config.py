@@ -8,6 +8,33 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _build_db_url() -> str:
+    """
+    Builds the SQLAlchemy database URL. Prefers an explicit DATABASE_URL
+    (e.g. set in docker-compose.yml for the containerized setup); falls
+    back to assembling it from the discrete DB_* variables defined in
+    .env (used for local/non-Docker runs), and finally to a local sqlite
+    file if nothing is configured.
+    """
+    explicit_url = os.getenv("DATABASE_URL")
+    if explicit_url:
+        return explicit_url
+
+    db_user = os.getenv("DB_USER")
+    db_password = os.getenv("DB_PASSWORD")
+    db_host = os.getenv("DB_HOST", "localhost")
+    db_port = os.getenv("DB_PORT", "3306")
+    db_name = os.getenv("DB_NAME")
+
+    if db_user and db_password and db_name:
+        return (
+            f"mariadb+mariadbconnector://{db_user}:{db_password}"
+            f"@{db_host}:{db_port}/{db_name}"
+        )
+
+    return "sqlite:///./test.db"
+
+
 @dataclass.dataclass
 class Config:
     # App configuration
@@ -17,19 +44,16 @@ class Config:
     app_nearest_stations_limit: int = int(os.getenv("APP_NEAREST_STATION_LIMIT", 10))
 
     # DB configuration
-    db_url: str = os.getenv("DATABASE_URL", "sqlite:///./test.db")
+    db_url: str = _build_db_url()
 
     # JWT configuration
-    jwt_secret_key: str = os.getenv(
-        "JWT_SECRET_KEY",
-        "OFXiUpIEzMYniAwbvAKBW1TBPRopiVAY0FSjJUAZzK0sEbZy7mwuTCSkU8gLUuR49lX9ibKaBJ5HyVJKKQj867YPssV8N67L9PmBjCexMUXS3y3EVFTn7jSjsSwto95mhkaImzlKNekAAi6vLgDU79fQszEZaoOF4nzrrbl4PnqpFlBAYyEylGTWv9rK6RLpzNLb3iyc8zEB9sqkgXtS9UK7RJRCQxh5pjxfdJELc1MquYeS5HbfTdTJaBL5t4D2"
-    )
+    jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "supersecretkey")  # TODO: change to a secure key in production
     jwt_algorithm: str = "HS256"
     jwt_expires_in: int = int(os.getenv("JWT_EXPIRES_IN", 3600))
 
     # Cookies configuration
-    cookie_secret: str = os.getenv("COOKIES_SECRET_KEY", "")
-    cookie_secure: bool = bool(os.getenv("COOKIES_SECURE", False))  # TODO: сhange to True for HTTPS in production
+    cookie_secret: str = os.getenv("COOKIES_SECRET_KEY", "supersecretkey") # TODO: change to a secure key in production
+    cookie_secure: bool = bool(os.getenv("COOKIES_SECURE", False))  # TODO: change to True for HTTPS in production
     max_cookie_lifetime_in_days: int = int(os.getenv("MAX_COOKIE_AGE_IN_DAYS", 7))
 
     @classmethod
