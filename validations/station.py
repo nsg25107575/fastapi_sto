@@ -1,16 +1,15 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from validations.service import ServiceResponseSchema
 
 
 class StationResponseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str | None = None
     address: str | None = None
     active: bool
-
-    class Config:
-        from_attributes = True
 
 
 class StationCreateSchema(BaseModel):
@@ -30,6 +29,8 @@ class NearestStationsSchema(BaseModel):
 
 
 class NearestStationResponseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     address: str
@@ -37,6 +38,3 @@ class NearestStationResponseSchema(BaseModel):
     longitude: float
     distance_km: float
     services: list[ServiceResponseSchema] = []
-
-    class Config:
-        from_attributes = True
