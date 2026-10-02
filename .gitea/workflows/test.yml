@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [ "**" ]
+    branches: ["**"]
 
 jobs:
   test:
@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v4
 
       # Secrets configured in: repo Settings -> Actions -> Secrets
-      # (DB_NAME, DB_USER, DB_PASSWORD, DB_ROOT_PASSWORD) — mirrors the
+      # (DB_NAME, DB_USER, DB_PASSWORD, DB_ROOT_PASSWORD) -- mirrors the
       # local .env used by `make up`/`make test`. The generated .env
       # below writes the real compose variable names (DB_PASSWORD,
       # MARIADB_ROOT_PASSWORD) that docker/api/docker-compose.ci.yml expects.
@@ -32,7 +32,7 @@ jobs:
             echo "APP_PORT=${ENV_APP_PORT:-8000}"
           } > .env
 
-      # Uses docker-compose.ci.yml (NOT the base docker-compose.yml) —
+      # Uses docker-compose.ci.yml (NOT the base docker-compose.yml) --
       # the base file bind-mounts the repo root (.:/app) for local dev
       # hot-reload, which breaks under Gitea Actions DooD: the Docker
       # daemon resolves "." against the job container's own path, not
@@ -41,17 +41,21 @@ jobs:
       # Dockerfile). The CI file relies solely on what's baked into
       # the image.
       #
-      # `down -v --remove-orphans` first: if a previous run was
-      # interrupted (runner restart, network outage, host power loss)
-      # before its own "Tear down stack" step could run, a stale
-      # container with the same fixed name (kws_station_api) is left
-      # behind and `up` fails outright with "Conflict: container name
-      # already in use" -- this makes every run self-healing instead of
-      # depending on the previous run having torn down cleanly.
+      # -p kws_station_api_ci + `down -v --remove-orphans` first:
+      # the CI stack now uses container names/ports distinct from
+      # production (kws_station_api_ci vs kws_station_api, see
+      # docker-compose.ci.yml header) specifically so a CI run can
+      # NEVER tear down or conflict with the live production
+      # containers running on this same host -- that cross-contamination
+      # (both used to share the same fixed names) was the real cause of
+      # production repeatedly going "unhealthy"/vanishing whenever a CI
+      # run happened to overlap with it. The explicit -p also protects
+      # against a run interrupted by a runner restart/network outage
+      # before its own "Tear down stack" step could execute.
       - name: Build & start stack
         run: |
-          docker compose -f docker/api/docker-compose.ci.yml --project-directory . down -v --remove-orphans || true
-          docker compose -f docker/api/docker-compose.ci.yml --project-directory . up -d --build
+          docker compose -p kws_station_api_ci -f docker/api/docker-compose.ci.yml --project-directory . down -v --remove-orphans || true
+          docker compose -p kws_station_api_ci -f docker/api/docker-compose.ci.yml --project-directory . up -d --build
 
       # 300s budget: pip/uv install + wait-for-db loop + ~15 Alembic
       # migrations + 4 Uvicorn workers starting + healthcheck
@@ -59,21 +63,21 @@ jobs:
       - name: Wait for api container to become healthy
         run: |
           timeout 300 sh -c '
-            until [ "$(docker inspect -f "{{.State.Health.Status}}" kws_station_api 2>/dev/null)" = "healthy" ]; do
+            until [ "$(docker inspect -f "{{.State.Health.Status}}" kws_station_api_ci 2>/dev/null)" = "healthy" ]; do
               sleep 2
             done
           '
 
       - name: Run test suite
-        run: docker compose -f docker/api/docker-compose.ci.yml --project-directory . exec -T api python -m pytest -q
+        run: docker compose -p kws_station_api_ci -f docker/api/docker-compose.ci.yml --project-directory . exec -T api python -m pytest -q
 
       - name: Tear down stack
         if: always()
-        run: docker compose -f docker/api/docker-compose.ci.yml --project-directory . down -v
+        run: docker compose -p kws_station_api_ci -f docker/api/docker-compose.ci.yml --project-directory . down -v
 
   # Runs only after `test` succeeds, and only on pushes to main. Deploys
   # over SSH directly on the host (NOT via the job container's Docker
-  # socket) — deliberately avoiding the DooD path-resolution issue that
+  # socket) -- deliberately avoiding the DooD path-resolution issue that
   # affects the base docker-compose.yml's `.:/app` bind mount (see the
   # "Build & start stack" comment above). An SSH session runs commands
   # in the host's real shell, in the real repo directory, so the
@@ -86,13 +90,13 @@ jobs:
       - name: Deploy over SSH
         env:
           # Secrets configured in: repo Settings -> Actions -> Secrets
-          # DEPLOY_SSH_KEY   — private key (ed25519) with write access,
+          # DEPLOY_SSH_KEY   -- private key (ed25519) with write access,
           #                    registered as a Deploy Key on this repo
           #                    AND authorized in the server's
           #                    ~/.ssh/authorized_keys for the deploy user.
-          # DEPLOY_HOST      — e.g. git.kirweb.space or the server's IP.
-          # DEPLOY_USER      — SSH user on the target host (e.g. root).
-          # DEPLOY_PATH      — absolute path to the repo on the host,
+          # DEPLOY_HOST      -- e.g. git.kirweb.space or the server's IP.
+          # DEPLOY_USER      -- SSH user on the target host (e.g. root).
+          # DEPLOY_PATH      -- absolute path to the repo on the host,
           #                    e.g. /root/kws_station_api.
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -108,8 +112,13 @@ jobs:
           # no external deps) plus docker-compose.prod.yml, which adds
           # the kws stack's external `kws_default` network so Nginx
           # Proxy Manager can reach this container by name. The prod
-          # override is intentionally NOT merged into the base file —
-          # see docker-compose.prod.yml header comment for why.
+          # override is intentionally NOT merged into the base file --
+          # see docker-compose.prod.yml header comment for why. This
+          # production stack's container names (kws_station_api,
+          # kws_station_db) are deliberately DIFFERENT from the CI
+          # stack's (kws_station_api_ci, kws_station_db_ci, see
+          # docker-compose.ci.yml) so the two can run on this host
+          # simultaneously without either tearing down the other.
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" "
             set -e
             cd '$DEPLOY_PATH'

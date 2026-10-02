@@ -1,17 +1,17 @@
-# Standalone CI compose file for Gitea Actions — NOT an override of
+# Standalone CI compose file for Gitea Actions -- NOT an override of
 # docker-compose.yml, to avoid relying on Compose's merge semantics for
 # list-type keys (volumes/ports are appended, not replaced, when using
 # multiple -f files unless the newer `!reset`/`!override` YAML tags are
-# used — safer to just maintain one explicit file for CI).
+# used -- safer to just maintain one explicit file for CI).
 #
 # Why this file exists: the base docker-compose.yml bind-mounts the
 # repo root into the container (`volumes: - .:/app`) for local dev
 # hot-reload. In Gitea Actions, the job itself runs inside a job
-# container (DooD — the runner shares the host's /var/run/docker.sock).
+# container (DooD -- the runner shares the host's /var/run/docker.sock).
 # When that job container invokes `docker compose up`, the Docker
 # daemon on the HOST resolves `.` against the job container's own
 # internal path (e.g. /workspace/KWS/kws_station_api), which doesn't
-# exist on the host — so the daemon silently creates an empty
+# exist on the host -- so the daemon silently creates an empty
 # directory there and mounts THAT into /app, shadowing everything the
 # image's `COPY . .` already baked in (including alembic.ini). Result:
 # `alembic upgrade head` fails with "No 'script_location' key found in
@@ -20,16 +20,25 @@
 # Fix: for CI, drop the bind mount entirely and rely on the code
 # already copied into the image by the Dockerfile.
 #
+# IMPORTANT -- container names/ports are deliberately DIFFERENT from
+# production (kws_station_api_ci / kws_station_db_ci, ports 8001/3307)
+# and the project uses its own name (-p kws_station_api_ci). The CI
+# runner and the production stack live on the SAME host; when both
+# used the same fixed names/ports, a test run's `down -v` would tear
+# down the live production containers (and vice versa) -- this is
+# exactly what caused the production API to repeatedly vanish/go
+# unhealthy whenever a CI run happened to overlap with it.
+#
 # Usage (see .gitea/workflows/test.yml):
-#   docker compose -f docker/api/docker-compose.ci.yml --project-directory . up -d --build
-#   docker compose -f docker/api/docker-compose.ci.yml --project-directory . exec -T api python -m pytest -q
-#   docker compose -f docker/api/docker-compose.ci.yml --project-directory . down -v
+#   docker compose -p kws_station_api_ci -f docker/api/docker-compose.ci.yml --project-directory . up -d --build
+#   docker compose -p kws_station_api_ci -f docker/api/docker-compose.ci.yml --project-directory . exec -T api python -m pytest -q
+#   docker compose -p kws_station_api_ci -f docker/api/docker-compose.ci.yml --project-directory . down -v
 services:
   api:
     build:
       context: .
       dockerfile: docker/api/Dockerfile
-    container_name: kws_station_api
+    container_name: kws_station_api_ci
     restart: "no"
     env_file:
       - .env
@@ -46,13 +55,13 @@ services:
       DB_POOL_TIMEOUT: "30"
       DB_POOL_RECYCLE: "1800"
     ports:
-      - "${APP_PORT:-8000}:${APP_PORT:-8000}"
+      - "8001:${APP_PORT:-8000}"
     depends_on:
       db:
         condition: service_healthy
-    # NOTE: no `volumes: - .:/app` here on purpose — see header comment.
+    # NOTE: no `volumes: - .:/app` here on purpose -- see header comment.
     networks:
-      - kws_station_net
+      - kws_station_net_ci
     logging:
       driver: json-file
       options:
@@ -61,11 +70,10 @@ services:
 
   db:
     image: mariadb:latest
-    container_name: kws_station_db
+    container_name: kws_station_db_ci
     restart: "no"
     env_file:
       - .env
-    # Flow-style mapping (one line) for the two credential vars — the
     # MariaDB image's own entrypoint requires these exact variable
     # names (MARIADB_ROOT_PASSWORD / MARIADB_PASSWORD), they cannot be
     # renamed. Values still come from .env via ${...} substitution.
@@ -76,7 +84,7 @@ services:
       MARIADB_PASSWORD: "${DB_PASSWORD}"
     }
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "3307:3306"
     volumes:
       - kws_station_db_data_ci:/var/lib/mysql
     healthcheck:
@@ -91,11 +99,11 @@ services:
         max-size: "10m"
         max-file: "5"
     networks:
-      - kws_station_net
+      - kws_station_net_ci
 
 volumes:
   kws_station_db_data_ci:
 
 networks:
-  kws_station_net:
+  kws_station_net_ci:
     driver: bridge
