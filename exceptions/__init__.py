@@ -12,6 +12,8 @@ from exceptions.exceptions import (
     DuplicateEmailException,
     DuplicateStationException,
     TokenExpiredException,
+    OrderNotFoundException,
+    InvalidOrderServiceException,
 )
 
 __all__ = [
@@ -20,4 +22,6 @@ __all__ = [
     "DuplicateEmailException",
     "DuplicateStationException",
     "TokenExpiredException",
+    "OrderNotFoundException",
+    "InvalidOrderServiceException",
 ]

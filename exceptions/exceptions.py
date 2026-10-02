@@ -30,3 +30,15 @@ TokenExpiredException = HTTPException(
     detail="The session has expired or has been invalidated.",
     headers={"WWW-Authenticate": "Bearer"},
 )
+
+OrderNotFoundException = HTTPException(
+    status_code=HTTP_404_NOT_FOUND,
+    detail="Order not found",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+InvalidOrderServiceException = HTTPException(
+    status_code=HTTP_400_BAD_REQUEST,
+    detail="The specified service does not belong to the specified station",
+    headers={"WWW-Authenticate": "Bearer"},
+)

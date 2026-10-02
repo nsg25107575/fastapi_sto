@@ -13,6 +13,7 @@ def test_create_customer_success(client):
 
     assert response.status_code == 200, response.text
     data = response.json()
+    assert isinstance(data["id"], int)
     assert data["public_data"] == {"browser": "test-agent"}
     assert "device_hash" in data
     assert len(data["device_hash"]) == 36

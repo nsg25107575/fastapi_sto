@@ -25,6 +25,11 @@ class CustomerModelAttrs(BaseModel):
 class CustomerResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    # Needed by the client to place an order (POST /orders) referencing
+    # this customer afterward -- without it, the "find nearest station ->
+    # order a service" flow has no way to carry the customer's identity
+    # from this call into the next one.
+    id: int
     ip: str
     device_hash: str
     public_data: dict

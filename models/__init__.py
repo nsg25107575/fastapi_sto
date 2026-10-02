@@ -1,5 +1,6 @@
 from database.engine import Base
 from models.customer import CustomerModel
+from models.order import OrderModel, OrderStatus
 from models.station import StationModel
 from models.station_contact import StationContactModel
 from models.station_customer import StationCustomerModel
@@ -14,6 +15,8 @@ __all__ = [
     'Base',
     'UserModel',
     'StationModel',
+    'OrderModel',
+    'OrderStatus',
     'StationServiceModel',
     'CustomerModel',
     'StationContactModel',
