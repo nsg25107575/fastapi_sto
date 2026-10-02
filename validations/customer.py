@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class CustomerCreate(BaseModel):
@@ -13,20 +13,18 @@ class CustomerCreate(BaseModel):
 class CustomerModelAttrs(BaseModel):
     """Internal shape mirroring the full CustomerModel row, kept for
     documentation/reference — not used directly as a request schema."""
+    model_config = ConfigDict(from_attributes=True)
+
     ip: str
     device_hash: str
     lat: float
     lng: float
     public_data: dict
 
-    class Config:
-        from_attributes = True
-
 
 class CustomerResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     ip: str
     device_hash: str
     public_data: dict
-
-    class Config:
-        from_attributes = True
