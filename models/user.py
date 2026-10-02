@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, String, select
+from sqlalchemy import DateTime, String, select, text
 from sqlalchemy.orm import Mapped, mapped_column, Session, relationship
 
 from auth.password import get_password_hash
@@ -25,10 +25,10 @@ class UserModel(Base):
     password: Mapped[str] = mapped_column(String(256), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="CURRENT_TIMESTAMP"
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="CURRENT_TIMESTAMP"
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
