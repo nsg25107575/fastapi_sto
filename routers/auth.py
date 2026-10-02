@@ -93,6 +93,9 @@ def sign_in(credentials: UserLoginSchema) -> JSONResponse:
                     "msg": "Login successful"
                 }
             ]},
+            # Explicit — JSONResponse defaults to 200, which would silently
+            # override the route's declared 202 Accepted otherwise.
+            status_code=status.HTTP_202_ACCEPTED,
         )
 
         # Cookie integration: writing the token to the browser response
