@@ -22,12 +22,17 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-# Ensure the app's own Config doesn't try to reach a real database or
-# pick up a developer's local .env while running the test suite.
-os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
-os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-not-for-production")
-os.environ.setdefault("COOKIES_SECRET_KEY", "test-cookie-secret")
-os.environ.setdefault("COOKIES_SECURE", "")
+# Force (not setdefault!) these so the suite is identical whether run on
+# a bare host or inside the `api` container — where docker-compose.yml
+# already injects a real DATABASE_URL/COOKIES_SECURE/etc. as OS-level env
+# vars before Python even starts. `setdefault` would silently keep those
+# container values (e.g. COOKIES_SECURE=True), which breaks the `station`
+# cookie round-trip against TestClient's plain-http requests and makes
+# every authenticated test fail with 401 — see docs/ISSUES.md.
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+os.environ["JWT_SECRET_KEY"] = "test-secret-key-not-for-production"
+os.environ["COOKIES_SECRET_KEY"] = "test-cookie-secret"
+os.environ["COOKIES_SECURE"] = ""
 
 import database.engine as db_engine_module  # noqa: E402
 
