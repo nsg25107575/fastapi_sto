@@ -6,22 +6,25 @@
 
 .PHONY: \
   migrate-up-index migrate-down-index migrate-up migrate-down \
-  build up up-build down restart logs ps \
+  migrate-revision build up up-build down restart logs ps \
   _ensure_uv deps-update deps-update-package deps-outdated \
   test test-verbose test-cov test-cov-html test-file
 
 # ───────────────────────────────────────────────────────────────────────────
-# Python interpreter resolution
+# Everything below (deps-*, test*, migrate-*) runs INSIDE the `api`
+# container via `docker compose exec`, not against a local .venv.
 #
-# `make` does not inherit an activated venv's PATH reliably on every shell
-# (notably MSYS2/Git Bash on Windows), so every Python-based target below
-# calls the venv's interpreter directly via `$(PYTHON) -m ...` instead of
-# relying on a bare `pytest`/`alembic` command being on PATH.
-# ───────────────────────────────────────────────────────────────────────────
-PYTHON := $(if $(wildcard .venv/Scripts/python.exe),.venv/Scripts/python.exe,$(if $(wildcard .venv/bin/python),.venv/bin/python,python))
-
-# ───────────────────────────────────────────────────────────────────────────
-# Docker — build & run
+# The container is the single source of truth for the environment and
+# code that actually ships — running these on the host instead would
+# risk a drifted local Python (missing pip/uv, wrong version, etc.)
+# giving a false pass/fail, or editing requirements.txt against the
+# wrong interpreter. The project directory is bind-mounted into the
+# container (`volumes: .:/app` in docker-compose.yml), so any file the
+# container writes (requirements.txt, migration scripts, coverage
+# reports) lands directly on the host, same as if it ran locally.
+#
+# All targets below require the `api` container to be running first
+# (`make up` / `make up-build`).
 # ───────────────────────────────────────────────────────────────────────────
 # NOTE: intentionally NOT named COMPOSE_FILE — that name collides with
 # Docker Compose's own environment variable of the same name.
@@ -30,6 +33,9 @@ PYTHON := $(if $(wildcard .venv/Scripts/python.exe),.venv/Scripts/python.exe,$(i
 # repo root, even though the compose file itself lives in docker/api/.
 DC := docker compose -f docker/api/docker-compose.yml --project-directory .
 
+# ───────────────────────────────────────────────────────────────────────────
+# Docker — build & run
+# ───────────────────────────────────────────────────────────────────────────
 ## Build (or rebuild) the api image
 build:
 	$(DC) build
@@ -57,60 +63,72 @@ ps:
 #
 # `uv` is required to compile requirements.txt, but it is a developer
 # TOOL, not an application dependency — it must NOT be added to
-# pyproject.toml's `dependencies`. Instead, each target below ensures a
-# local `uv` is available (installed into the active venv on first use)
-# before calling it. See docs/INSTALL.md "Dependency Tooling" for the
+# pyproject.toml's `dependencies`. Instead, each target below ensures
+# `uv` is available *inside the api container* (installed on first use)
+# before calling it — see docs/INSTALL.md "Dependency Tooling" for the
 # manual install command if you prefer to run `uv` yourself.
 # ───────────────────────────────────────────────────────────────────────────
 _ensure_uv:
-	@$(PYTHON) -m uv --version >/dev/null 2>&1 || $(PYTHON) -m pip install -q uv
+	@$(DC) exec api python -m uv --version >/dev/null 2>&1 || $(DC) exec api python -m pip install -q uv
 
 ## Recompile requirements.txt with the latest versions allowed by pyproject.toml
 deps-update: _ensure_uv
-	$(PYTHON) -m uv pip compile --upgrade pyproject.toml --output-file requirements.txt
+	$(DC) exec api python -m uv pip compile --upgrade pyproject.toml --output-file requirements.txt
 ## Upgrade a single package only (usage: make deps-update-package package="fastapi")
 deps-update-package: _ensure_uv
-	$(PYTHON) -m uv pip compile --upgrade-package $(package) pyproject.toml --output-file requirements.txt
+	$(DC) exec api python -m uv pip compile --upgrade-package $(package) pyproject.toml --output-file requirements.txt
 ## List installed packages that have newer versions available
 deps-outdated:
-	$(PYTHON) -m pip list --outdated
+	$(DC) exec api python -m pip list --outdated
 
 # ───────────────────────────────────────────────────────────────────────────
-# Testing — pytest + coverage (see docs/TESTING.md)
+# Testing — pytest + coverage, run INSIDE the api container (see docs/TESTING.md)
+#
+# Tests exercise the environment and code as they actually run in the
+# container built from docker/api/Dockerfile — not a local .venv, which
+# can drift from what's pinned in requirements.txt. There is intentionally
+# no local/.venv-based test target: the container IS the thing under
+# test. Requires the `api` container to be running (`make up`/`make
+# up-build` first). Still uses the isolated in-memory SQLite from
+# tests/conftest.py, NOT the `db` MariaDB service — safe to run against
+# a live stack without touching real data.
 # ───────────────────────────────────────────────────────────────────────────
-## Run the full test suite (isolated SQLite, no Docker/MariaDB required)
+## Run the full test suite inside the api container
 test:
-	$(PYTHON) -m pytest -q
-## Run the full test suite with verbose per-test output
+	$(DC) exec api python -m pytest -q
+## Run the full test suite inside the api container with verbose per-test output
 test-verbose:
-	$(PYTHON) -m pytest -v
-## Run the full test suite with a coverage summary (fails if coverage < 80%)
+	$(DC) exec api python -m pytest -v
+## Run the full test suite inside the api container with a coverage summary (fails if coverage < 80%)
 test-cov:
-	$(PYTHON) -m pytest --cov=. --cov-report=term-missing --cov-fail-under=80
-## Run tests with coverage and generate an HTML report (see htmlcov/index.html)
+	$(DC) exec api python -m pytest --cov=. --cov-report=term-missing --cov-fail-under=80
+## Run tests inside the api container with coverage and generate an HTML report (see htmlcov/index.html inside the container)
 test-cov-html:
-	$(PYTHON) -m pytest --cov=. --cov-report=html --cov-report=term-missing
-## Run a single test file or node id (usage: make test-file file="tests/test_stations.py")
+	$(DC) exec api python -m pytest --cov=. --cov-report=html --cov-report=term-missing
+## Run a single test file or node id inside the api container (usage: make test-file file="tests/test_stations.py")
 ## or make test-file file="tests/test_stations.py::test_create_station_success"
 test-file:
-	$(PYTHON) -m pytest -v $(file)
+	$(DC) exec api python -m pytest -v $(file)
 
 # ───────────────────────────────────────────────────────────────────────────
-# Alembic — migration
+# Alembic — migration, run INSIDE the api container
 # ───────────────────────────────────────────────────────────────────────────
 ## Upgrade migration by index
 ## Usage:
 ##   make migrate upgrade index="1" — upgrade migration ${index}
 migrate-up-index:
-	$(PYTHON) -m alembic upgrade $(index)
+	$(DC) exec api python -m alembic upgrade $(index)
 ## Downgrade migration by index
 ## Usage:
 ##   make migrate downgrade index="1" — downgrade migration ${index}
 migrate-down-index:
-	$(PYTHON) -m alembic downgrade $(index)
+	$(DC) exec api python -m alembic downgrade $(index)
 ## Upgrade all migration
 migrate-up:
-	$(PYTHON) -m alembic upgrade head
+	$(DC) exec api python -m alembic upgrade head
 ## Downgrade all migration
 migrate-down:
-	$(PYTHON) -m alembic downgrade base
+	$(DC) exec api python -m alembic downgrade base
+## Autogenerate a new migration revision (usage: make migrate-revision msg="describe the schema change")
+migrate-revision:
+	$(DC) exec api python -m alembic revision --autogenerate -m "$(msg)"
