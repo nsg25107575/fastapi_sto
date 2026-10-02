@@ -2,9 +2,17 @@
 
 ## Philosophy
 
+Tests run **inside the `api` container**, not against a local `.venv` —
+the container is built from `docker/api/Dockerfile` and
+`requirements.txt`, so it's the exact environment and code that actually
+ships. There is intentionally no local/host-based way to run the suite:
+testing the container is testing the real thing, with no risk of a
+drifted local Python install (missing `pip`/`uv`, wrong Python version,
+accidentally-uninstalled packages) giving a false pass or fail.
+
 The suite runs against an **in-memory SQLite database**, not the real
-MariaDB — this makes tests fast, hermetic, and runnable with zero
-infrastructure (no Docker, no running database server). Every test
+MariaDB — this makes tests fast and hermetic, and means they can run
+against a live stack without ever touching real data. Every test
 function gets a freshly created/dropped schema (`tests/conftest.py`,
 `_fresh_schema` autouse fixture), so tests are fully isolated from each
 other.
@@ -23,25 +31,43 @@ in `tests/test_station_model.py`).
 
 ## Running Tests
 
+The `api` container must be running first (`make up` or `make
+up-build`):
+
 ```bash
-make test             # run the full suite
-make test-verbose     # same, with per-test output
-make test-cov         # run with coverage summary, fails if < 80%
-make test-cov-html    # generate an HTML coverage report (htmlcov/index.html)
+make up-build        # build & start the stack, if not already running
+
+make test            # run the full suite inside the api container
+make test-verbose    # same, with per-test output
+make test-cov        # run with coverage summary, fails if < 80%
+make test-cov-html   # generate an HTML coverage report (inside the container)
 make test-file file="tests/test_stations.py"              # single file
 make test-file file="tests/test_stations.py::test_create_station_success"  # single test
 ```
 
-Equivalent raw commands (if not using `make`):
+Each target runs `docker compose exec api python -m pytest ...` under
+the hood (see the `Makefile`). Equivalent raw command (if not using
+`make`):
 
 ```bash
-pytest -q
-pytest --cov=. --cov-report=term-missing --cov-fail-under=80
+docker compose -f docker/api/docker-compose.yml --project-directory . exec api python -m pytest -q
 ```
 
-No `.env` or running database is required — `tests/conftest.py` sets
-`DATABASE_URL=sqlite:///:memory:` (and dummy JWT/cookie secrets) before
-anything else is imported.
+The `api` container itself still needs a valid `.env` and the `db`
+service running to start up normally (see [INSTALL.md](INSTALL.md)) —
+but once it's up, the test suite never touches that real database:
+`tests/conftest.py` forces `DATABASE_URL=sqlite:///:memory:` (and dummy
+JWT/cookie secrets) before anything else is imported.
+
+> **Note on container env vars:** `conftest.py` *forcibly overwrites*
+> `DATABASE_URL`, `JWT_SECRET_KEY`, `COOKIES_SECRET_KEY`, and
+> `COOKIES_SECURE` (not `os.environ.setdefault`) specifically because the
+> `api` container's `docker-compose.yml` already injects real values for
+> these as OS-level environment variables before Python even starts.
+> Using `setdefault` there would silently keep `COOKIES_SECURE=True`,
+> which breaks the `station` cookie round-trip over `TestClient`'s plain
+> HTTP requests and makes every authenticated test fail with 401 — this
+> was a real bug caught by actually running tests inside the container.
 
 ## Test Layout
 
