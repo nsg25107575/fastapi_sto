@@ -28,7 +28,7 @@ jobs:
             echo "DB_NAME=$ENV_DB_NAME"
             echo "DB_USER=$ENV_DB_USER"
             printf 'DB_%s=%s\n' 'PASS''WORD' "$ENV_DB_PASSWORD"
-            printf 'MARIADB_ROOT_%s=%s\n' 'PASS''WORD' "$ENV_DB_ROOT_PASSWORD"
+            printf 'DB_ROOT_%s=%s\n' 'PASS''WORD' "$ENV_DB_ROOT_PASSWORD"
             echo "APP_PORT=${ENV_APP_PORT:-8000}"
           } > .env
 
