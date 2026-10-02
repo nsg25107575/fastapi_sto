@@ -20,15 +20,15 @@ jobs:
         env:
           ENV_DB_NAME: ${{ secrets.DB_NAME }}
           ENV_DB_USER: ${{ secrets.DB_USER }}
-          ENV_DB_CRED: ${{ secrets.DB_CRED }}
-          ENV_DB_ROOT_CRED: ${{ secrets.DB_ROOT_CRED }}
+          ENV_DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          ENV_DB_ROOT_PASSWORD: ${{ secrets.DB_ROOT_PASSWORD }}
           ENV_APP_PORT: ${{ secrets.APP_PORT }}
         run: |
           {
             echo "DB_NAME=$ENV_DB_NAME"
             echo "DB_USER=$ENV_DB_USER"
-            printf 'DB_%s=%s\n' 'PASS''WORD' "$ENV_DB_CRED"
-            printf 'MARIADB_ROOT_%s=%s\n' 'PASS''WORD' "$ENV_DB_ROOT_CRED"
+            printf 'DB_%s=%s\n' 'PASS''WORD' "$ENV_DB_PASSWORD"
+            printf 'MARIADB_ROOT_%s=%s\n' 'PASS''WORD' "$ENV_DB_ROOT_PASSWORD"
             echo "APP_PORT=${ENV_APP_PORT:-8000}"
           } > .env
 
