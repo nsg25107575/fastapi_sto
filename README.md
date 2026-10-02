@@ -60,7 +60,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) for the full installation guide.
 
 ```bash
 cp .env.example .env   # fill in real secrets
-make docker-up-build   # build images and start the stack
+make up-build          # build images and start the stack
 make migrate-up        # apply database migrations
 ```
 
@@ -95,6 +95,9 @@ the upper bound by hand after verifying the suite passes).
 compiled *from* `pyproject.toml` — it also pins every transitive
 dependency (not declared by hand). To refresh it:
 
+`make deps-update*`/`deps-outdated` run inside the `api` container (requires it running — `make up`/`make up-build`
+first):
+
 ```bash
 make deps-update                        # upgrade everything within pyproject.toml constraints
 make deps-update-package package="fastapi"   # upgrade a single package
@@ -114,9 +117,15 @@ is configured against this repository.
 ## Testing
 
 ```bash
-make test          # run the full suite (isolated SQLite, no DB server needed)
-make test-cov       # run with coverage summary (fails if < 80%)
+make up-build    # build & start the stack first, if not already running
+
+make test        # run the full suite inside the api container
+make test-cov     # same, with coverage summary (fails if < 80%)
 ```
+
+Tests always run inside the `api` container (against an isolated
+in-memory SQLite, not the real `db`) — there is no local/host-based test
+target. See [docs/TESTING.md](docs/TESTING.md) for why.
 
 See [docs/TESTING.md](docs/TESTING.md) for the full breakdown of what's
 covered and how fixtures work.
