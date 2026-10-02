@@ -60,3 +60,45 @@ jobs:
       - name: Tear down stack
         if: always()
         run: docker compose -f docker/api/docker-compose.ci.yml --project-directory . down -v
+
+  # Runs only after `test` succeeds, and only on pushes to main. Deploys
+  # over SSH directly on the host (NOT via the job container's Docker
+  # socket) — deliberately avoiding the DooD path-resolution issue that
+  # broke the base docker-compose.yml's `.:/app` bind mount (see the
+  # "Build & start stack" comment above). An SSH session runs commands
+  # in the host's real shell, in the real ~/kws_station_api directory,
+  # so `make up-build` there behaves exactly like it does when you run
+  # it manually.
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        env:
+          # Secrets configured in: repo Settings -> Actions -> Secrets
+          # DEPLOY_SSH_KEY   — private key (ed25519) with write access,
+          #                    registered as a Deploy Key on this repo
+          #                    AND authorized in the server's
+          #                    ~/.ssh/authorized_keys for the deploy user.
+          # DEPLOY_HOST      — e.g. git.kirweb.space or the server's IP.
+          # DEPLOY_USER      — SSH user on the target host (e.g. root).
+          # DEPLOY_PATH      — absolute path to the repo on the host,
+          #                    e.g. /root/kws_station_api.
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" "
+            set -e
+            cd '$DEPLOY_PATH'
+            git fetch origin main
+            git reset --hard origin/main
+            make up-build
+          "
