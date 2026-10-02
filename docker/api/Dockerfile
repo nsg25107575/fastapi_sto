@@ -43,8 +43,12 @@ ENV PYTHONUNBUFFERED=1 \
 
 EXPOSE $APP_PORT
 
+# Uses /stations/ (always public, independent of APP_ENV) rather than
+# /docs -- /docs is now locked to 404 outside development (see main.py),
+# which made this healthcheck fail forever in CI/production and left
+# the container stuck "unhealthy"/restarting despite the app working fine.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=5 \
-    CMD sh -c 'curl -fsS "http://localhost:${APP_PORT}/docs" -o /dev/null' || exit 1
+    CMD sh -c 'curl -fsS "http://localhost:${APP_PORT}/stations/" -o /dev/null' || exit 1
 
 # entrypoint.sh waits for the database, applies Alembic migrations, then
 # execs Uvicorn — see docker/api/entrypoint.sh for details.
