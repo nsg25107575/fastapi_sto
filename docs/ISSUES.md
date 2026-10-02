@@ -250,6 +250,37 @@ import scan) with **compatible-release ranges**:
   `pyproject.toml` — they're resolved and pinned automatically into
   `requirements.txt` by the dependency resolver.
 
+## Dependency Audit Correction (2026-10-02, same day)
+
+After the "only direct imports" rule was applied, `make test`/`make
+test-cov` broke on a clean install with:
+`RuntimeError: The starlette.testclient module requires the httpx2
+package` and (on Windows) `zoneinfo.ZoneInfoNotFoundError: No time zone
+found with key Europe/Kyiv`.
+
+**Root cause:** the import scan only looks at `import`/`from` statements
+in application code — it cannot see **test-runtime-only** dependencies (`httpx`, required internally by
+`fastapi.testclient.TestClient`, never
+imported directly by any test file) or **platform-conditional stdlib
+dependencies** (`zoneinfo.ZoneInfo(...)` needs IANA tzdata, which Linux/
+macOS ship with the OS but Windows does not — hence `tzdata`).
+
+**Fix:** added both back as explicit direct dependencies in
+`pyproject.toml`:
+
+- `httpx>=0.28.1,<1.0.0` — unconditional (needed by the test suite on
+  every platform).
+- `tzdata>=2026.4,<2027.0; sys_platform == 'win32'` — Windows-only via a
+  PEP 508 environment marker, so Linux/macOS installs don't carry the
+  extra ~350 KB they don't need.
+
+**Lesson:** a static import scan is a good *starting point* for a
+dependency audit, but always verify with a clean-install smoke test (`pip install -r requirements.txt` into a fresh
+venv, then run the full
+test suite) before trusting "this package has zero imports → it's safe
+to remove" — some dependencies are consumed indirectly by a framework (`TestClient`) or are platform-specific (`tzdata`
+on Windows).
+
 ## Testing Gaps (addressed in this pass)
 
 - Prior to this pass, only `tests/test_stations.py` existed, and it
