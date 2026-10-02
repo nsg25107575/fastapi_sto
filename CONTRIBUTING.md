@@ -18,14 +18,17 @@ expected workflow and code standards for this project.
 1. **Write/update tests first** where practical (unit or integration) for the
    behavior you are changing.
 2. **Implement the change.**
-3. **Run the test suite** and make sure it passes:
+3. **Run the test suite** (inside the `api` container — see
+   [docs/TESTING.md](docs/TESTING.md)) and make sure it passes:
    ```bash
-   pytest
+   make up-build   # if the container isn't already running
+   make test
    ```
 4. **Run database migrations** if your change touches the schema:
+   (also run inside the `api` container — see [docs/DATABASE.md](docs/DATABASE.md))
    ```bash
    # Create a new revision
-   alembic revision --autogenerate -m "describe your change"
+   make migrate-revision msg="describe your change"
    # Apply it
    make migrate-up
    ```
@@ -75,7 +78,7 @@ when testing changes via Docker.
   packages needed to build the image, update `docker/api/Dockerfile`
   accordingly and verify the image still builds:
   ```bash
-  make docker-build
+  make build
   ```
 - Prefer regenerating `requirements.txt` via `make deps-update` (or
   `make deps-update-package package="x"` for a single package) rather than
@@ -89,7 +92,7 @@ when testing changes via Docker.
 
 ## Submitting Changes
 
-1. Make sure `pytest` passes and the Docker image builds cleanly.
+1. Make sure `make test` passes and the Docker image builds cleanly.
 2. Keep commits focused and messages descriptive.
 3. Open a pull request describing:
    - What changed and why.
@@ -101,5 +104,5 @@ when testing changes via Docker.
 When reporting a bug, please include:
 - Steps to reproduce.
 - Expected vs. actual behavior.
-- Relevant logs (`make docker-logs`) and environment details (Python
+- Relevant logs (`make logs`) and environment details (Python
   version, Docker version, OS).
