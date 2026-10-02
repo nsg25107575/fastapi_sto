@@ -29,9 +29,7 @@ os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-not-for-production")
 os.environ.setdefault("COOKIES_SECRET_KEY", "test-cookie-secret")
 os.environ.setdefault("COOKIES_SECURE", "")
 
-import models  # noqa: E402  (import after env setup; registers all models' metadata)
-from database.engine import Base, get_session  # noqa: E402
-from main import app  # noqa: E402
+import database.engine as db_engine_module  # noqa: E402
 
 # A single shared in-memory SQLite database for the whole test process.
 # StaticPool keeps the same connection alive across sessions (plain
@@ -59,6 +57,20 @@ TestSessionLocal = sessionmaker(
     autoflush=False,
     autocommit=False,
 )
+
+# IMPORTANT: some routers (e.g. routers/auth.py) open sessions directly via
+# `with Session(engine) as session:` using the module-level `engine` from
+# database.engine, instead of the `get_session` FastAPI dependency. That
+# bypasses `app.dependency_overrides`, so those routes would otherwise hit
+# the real configured database. Patch the shared module objects BEFORE
+# importing `main` (which imports all routers) so every `from
+# database.engine import engine` picks up the test engine transitively.
+# See docs/ISSUES.md (ISSUE-18) for the underlying design fix.
+db_engine_module.engine = test_engine
+db_engine_module.SessionLocal = TestSessionLocal
+
+from database.engine import Base, get_session  # noqa: E402
+from main import app  # noqa: E402
 
 
 @pytest.fixture(scope="function", autouse=True)
