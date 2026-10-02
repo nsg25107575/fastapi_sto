@@ -1,0 +1,5 @@
+# NOTE: Docker uses the .dockerignore located at the build context root
+# (project root), not this one — .dockerignore is NOT configurable per
+# Dockerfile location in classic `docker build`. This file is kept here
+# only for documentation/reference; the actual ignore rules live in the
+# project root's .dockerignore.
