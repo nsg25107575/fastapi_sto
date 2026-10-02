@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from validation.service import ServiceResponseSchema
+from validations.service import ServiceResponseSchema
 
 
 class StationResponseSchema(BaseModel):

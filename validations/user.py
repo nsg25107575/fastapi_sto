@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_validator, EmailStr
 
 class UserCreateSchema(BaseModel):
     email: EmailStr
-    # base password validation
+    # base password validations
     password: str = Field(..., min_length=8, max_length=64)
     first_name: str | None = Field(default=None, max_length=50)
     second_name: str | None = Field(default=None, max_length=50)
