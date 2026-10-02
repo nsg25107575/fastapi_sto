@@ -9,6 +9,17 @@
   build up up-build down restart logs ps \
   _ensure_uv deps-update deps-update-package deps-outdated \
   test test-verbose test-cov test-cov-html test-file
+
+# ───────────────────────────────────────────────────────────────────────────
+# Python interpreter resolution
+#
+# `make` does not inherit an activated venv's PATH reliably on every shell
+# (notably MSYS2/Git Bash on Windows), so every Python-based target below
+# calls the venv's interpreter directly via `$(PYTHON) -m ...` instead of
+# relying on a bare `pytest`/`alembic` command being on PATH.
+# ───────────────────────────────────────────────────────────────────────────
+PYTHON := $(if $(wildcard .venv/Scripts/python.exe),.venv/Scripts/python.exe,$(if $(wildcard .venv/bin/python),.venv/bin/python,python))
+
 # ───────────────────────────────────────────────────────────────────────────
 # Docker — build & run
 # ───────────────────────────────────────────────────────────────────────────
@@ -52,37 +63,37 @@ ps:
 # manual install command if you prefer to run `uv` yourself.
 # ───────────────────────────────────────────────────────────────────────────
 _ensure_uv:
-	@python -m uv --version >/dev/null 2>&1 || python -m pip install -q uv
+	@$(PYTHON) -m uv --version >/dev/null 2>&1 || $(PYTHON) -m pip install -q uv
 
 ## Recompile requirements.txt with the latest versions allowed by pyproject.toml
 deps-update: _ensure_uv
-	python -m uv pip compile --upgrade pyproject.toml --output-file requirements.txt
+	$(PYTHON) -m uv pip compile --upgrade pyproject.toml --output-file requirements.txt
 ## Upgrade a single package only (usage: make deps-update-package package="fastapi")
 deps-update-package: _ensure_uv
-	python -m uv pip compile --upgrade-package $(package) pyproject.toml --output-file requirements.txt
+	$(PYTHON) -m uv pip compile --upgrade-package $(package) pyproject.toml --output-file requirements.txt
 ## List installed packages that have newer versions available
 deps-outdated:
-	python -m pip list --outdated
+	$(PYTHON) -m pip list --outdated
 
 # ───────────────────────────────────────────────────────────────────────────
 # Testing — pytest + coverage (see docs/TESTING.md)
 # ───────────────────────────────────────────────────────────────────────────
 ## Run the full test suite (isolated SQLite, no Docker/MariaDB required)
 test:
-	pytest -q
+	$(PYTHON) -m pytest -q
 ## Run the full test suite with verbose per-test output
 test-verbose:
-	pytest -v
+	$(PYTHON) -m pytest -v
 ## Run the full test suite with a coverage summary (fails if coverage < 80%)
 test-cov:
-	pytest --cov=. --cov-report=term-missing --cov-fail-under=80
+	$(PYTHON) -m pytest --cov=. --cov-report=term-missing --cov-fail-under=80
 ## Run tests with coverage and generate an HTML report (see htmlcov/index.html)
 test-cov-html:
-	pytest --cov=. --cov-report=html --cov-report=term-missing
+	$(PYTHON) -m pytest --cov=. --cov-report=html --cov-report=term-missing
 ## Run a single test file or node id (usage: make test-file file="tests/test_stations.py")
 ## or make test-file file="tests/test_stations.py::test_create_station_success"
 test-file:
-	pytest -v $(file)
+	$(PYTHON) -m pytest -v $(file)
 
 # ───────────────────────────────────────────────────────────────────────────
 # Alembic — migration
@@ -91,15 +102,15 @@ test-file:
 ## Usage:
 ##   make migrate upgrade index="1" — upgrade migration ${index}
 migrate-up-index:
-	alembic upgrade $(index)
+	$(PYTHON) -m alembic upgrade $(index)
 ## Downgrade migration by index
 ## Usage:
 ##   make migrate downgrade index="1" — downgrade migration ${index}
 migrate-down-index:
-	alembic downgrade $(index)
+	$(PYTHON) -m alembic downgrade $(index)
 ## Upgrade all migration
 migrate-up:
-	alembic upgrade head
+	$(PYTHON) -m alembic upgrade head
 ## Downgrade all migration
 migrate-down:
-	alembic downgrade base
+	$(PYTHON) -m alembic downgrade base
