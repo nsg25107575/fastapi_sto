@@ -30,8 +30,12 @@ from sqlalchemy.pool import StaticPool
 # cookie round-trip against TestClient's plain-http requests and makes
 # every authenticated test fail with 401 — see docs/ISSUES.md.
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
-os.environ["JWT_SECRET_KEY"] = "test-secret-key-not-for-production"
-os.environ["COOKIES_SECRET_KEY"] = "test-cookie-secret"
+os.environ["JWT_SECRET_KEY"] = "test-jwt-secret-at-least-32-bytes-long"
+# auth/config.py's LoginManager is actually keyed off COOKIES_SECRET_KEY
+# (Config.cookie_secret), not JWT_SECRET_KEY — PyJWT/fastapi-login emit
+# InsecureKeyLengthWarning for any HMAC key under 32 bytes, so this must
+# be >= 32 chars too, not just "long enough to look like a secret".
+os.environ["COOKIES_SECRET_KEY"] = "test-cookie-secret-at-least-32-bytes-long"
 os.environ["COOKIES_SECURE"] = ""
 
 import database.engine as db_engine_module  # noqa: E402
