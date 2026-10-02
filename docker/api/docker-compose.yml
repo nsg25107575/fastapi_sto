@@ -15,7 +15,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: "mariadb+mariadbconnector://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT:-3306}/${DB_NAME}"
+      DATABASE_URL: "mariadb+mariadbconnector://db:${DB_PORT:-3306}/${DB_NAME}"
       DB_HOST: db
       APP_PORT: "${APP_PORT:-8000}"
       # Scale workers to CPU cores available to this container; raise together
@@ -25,7 +25,7 @@ services:
       UVICORN_BACKLOG: "2048"
       UVICORN_KEEPALIVE: "5"
       # Per-worker SQLAlchemy pool; total DB connections used by this
-      # service ≈ UVICORN_WORKERS * (DB_POOL_SIZE + DB_POOL_MAX_OVERFLOW).
+      # service - UVICORN_WORKERS * (DB_POOL_SIZE + DB_POOL_MAX_OVERFLOW).
       DB_POOL_SIZE: "10"
       DB_POOL_MAX_OVERFLOW: "20"
       DB_POOL_TIMEOUT: "30"
@@ -39,6 +39,13 @@ services:
       - .:/app
     networks:
       - kws_station_net
+      # Joins the kws stack's own network (postgres_db, gitea, redmine,
+      # nginx-proxy-manager) so Nginx Proxy Manager can reach this
+      # container directly by name (http://kws_station_api:8000)
+      # instead of relying on the host's 0.0.0.0 bridge IP, which NPM
+      # (itself a container) cannot resolve - that caused the
+      # 502 Bad Gateway on sto.kirweb.space.
+      - kws_default
     deploy:
       resources:
         limits:
@@ -120,3 +127,9 @@ volumes:
 networks:
   kws_station_net:
     driver: bridge
+  # Pre-existing network from the kws stack (docker-compose.yml at
+  # ~/kws/) - must already exist on the host (created by the kws
+  # stack itself). external: true tells Compose to attach to it
+  # rather than try to create/manage it.
+  kws_default:
+    external: true
