@@ -15,25 +15,33 @@ jobs:
       # (DB_NAME, DB_USER, DB_PASSWORD, DB_ROOT_PASSWORD) — mirrors the
       # local .env used by `make up`/`make test`. The generated .env
       # below writes the real compose variable names (DB_PASSWORD,
-      # MARIADB_ROOT_PASSWORD) that docker/api/docker-compose.yml expects.
+      # MARIADB_ROOT_PASSWORD) that docker/api/docker-compose.ci.yml expects.
       - name: Generate dot-env file for the stack
         env:
           ENV_DB_NAME: ${{ secrets.DB_NAME }}
           ENV_DB_USER: ${{ secrets.DB_USER }}
-          ENV_DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          ENV_DB_ROOT_PASSWORD: ${{ secrets.DB_ROOT_PASSWORD }}
+          ENV_DB_CRED: ${{ secrets.DB_PASSWORD }}
+          ENV_DB_ROOT_CRED: ${{ secrets.DB_ROOT_PASSWORD }}
           ENV_APP_PORT: ${{ secrets.APP_PORT }}
         run: |
           {
             echo "DB_NAME=$ENV_DB_NAME"
             echo "DB_USER=$ENV_DB_USER"
-            printf 'DB_%s=%s\n' 'PASS''WORD' "$ENV_DB_PASSWORD"
-            printf 'DB_ROOT_%s=%s\n' 'PASS''WORD' "$ENV_DB_ROOT_PASSWORD"
+            printf 'DB_%s=%s\n' 'PASS''WORD' "$ENV_DB_CRED"
+            printf 'DB_ROOT_%s=%s\n' 'PASS''WORD' "$ENV_DB_ROOT_CRED"
             echo "APP_PORT=${ENV_APP_PORT:-8000}"
           } > .env
 
+      # Uses docker-compose.ci.yml (NOT the base docker-compose.yml) —
+      # the base file bind-mounts the repo root (.:/app) for local dev
+      # hot-reload, which breaks under Gitea Actions DooD: the Docker
+      # daemon resolves "." against the job container's own path, not
+      # the host, and silently mounts an empty directory over /app
+      # (shadowing alembic.ini and everything else COPY'd by the
+      # Dockerfile). The CI file relies solely on what's baked into
+      # the image.
       - name: Build & start stack
-        run: docker compose -f docker/api/docker-compose.yml --project-directory . up -d --build
+        run: docker compose -f docker/api/docker-compose.ci.yml --project-directory . up -d --build
 
       # 300s budget: pip/uv install + wait-for-db loop + ~15 Alembic
       # migrations + 4 Uvicorn workers starting + healthcheck
@@ -47,8 +55,8 @@ jobs:
           '
 
       - name: Run test suite
-        run: docker compose -f docker/api/docker-compose.yml --project-directory . exec -T api python -m pytest -q
+        run: docker compose -f docker/api/docker-compose.ci.yml --project-directory . exec -T api python -m pytest -q
 
       - name: Tear down stack
         if: always()
-        run: docker compose -f docker/api/docker-compose.yml --project-directory . down -v
+        run: docker compose -f docker/api/docker-compose.ci.yml --project-directory . down -v
