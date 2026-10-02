@@ -78,7 +78,7 @@ Hashing uses `bcrypt` directly (`auth/password.py`), **not** `passlib` or
 | `COOKIES_SECRET_KEY` | Declared in `Config` but **not currently passed** to the cookie signer — see [ISSUES.md](ISSUES.md) |
 | `COOKIES_SECURE`     | Whether the `station` cookie requires HTTPS (`Secure` flag)                                         |
 
-`config.py` currently ships **hardcoded fallback values**
+`../config/config.py` currently ships **hardcoded fallback values**
 (`"supersecretkey"`) for both `JWT_SECRET_KEY` and `COOKIES_SECRET_KEY` if
 the env vars are unset. This is convenient for local development but a
 real security risk if ever deployed without overriding them — see

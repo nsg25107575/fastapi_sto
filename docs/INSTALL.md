@@ -48,8 +48,7 @@ cp .env.example .env
 > unique values for `JWT_SECRET_KEY`, `COOKIES_SECRET_KEY`, `DB_PASSWORD`,
 > and `DB_ROOT_PASSWORD` before deploying anywhere beyond local development.
 
-The application resolves the database connection in this order
-(see `config.py`):
+The application resolves the database connection in this order (see `../config/config.py`):
 1. An explicit `DATABASE_URL`, if set (used automatically inside Docker).
 2. Otherwise, it is assembled from `DB_USER`, `DB_PASSWORD`, `DB_HOST`,
    `DB_PORT`, and `DB_NAME`.

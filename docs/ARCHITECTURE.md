@@ -48,24 +48,24 @@ FastAPI app (main.py)
   (`auth/config.py`), password hashing (`auth/password.py`), and the
   `get_current_user` FastAPI dependency (`auth/dependencies.py`).
 - **`database/`** — Engine/session construction (`engine.py`).
-- **`config.py`** — Single source of truth for environment-derived
+- **`../config/config.py`** — Single source of truth for environment-derived
   settings, exposed as a frozen `Config` dataclass.
 
 ## Key Modules
 
-| Module                      | Responsibility                                                              |
-|-----------------------------|-----------------------------------------------------------------------------|
-| `main.py`                   | FastAPI app instance, router registration, custom `/docs` page              |
-| `config.py`                 | Environment variable loading, `DATABASE_URL` resolution                     |
-| `database/engine.py`        | SQLAlchemy `Engine` (connection pool) + `get_session` dependency            |
-| `auth/config.py`            | `fastapi-login` `LoginManager` instance, cookie parameters                  |
-| `auth/dependencies.py`      | `load_user` (token → user) and `get_current_user` dependency                |
-| `auth/password.py`          | `bcrypt` password hashing/verification                                      |
-| `models/station.py`         | Station CRUD, full-text name search, nearest-station geo query, soft delete |
-| `models/station_service.py` | Per-station price list CRUD + aggregated price ranges                       |
-| `models/user.py`            | User lookup/creation                                                        |
-| `models/token.py`           | Session token persistence (DB-backed, not stateless JWT-only)               |
-| `exceptions.py`             | Centralized `HTTPException` instances reused across routers                 |
+| Module                        | Responsibility                                                              |
+|-------------------------------|-----------------------------------------------------------------------------|
+| `main.py`                     | FastAPI app instance, router registration, custom `/docs` page              |
+| `../config/config.py`         | Environment variable loading, `DATABASE_URL` resolution                     |
+| `database/engine.py`          | SQLAlchemy `Engine` (connection pool) + `get_session` dependency            |
+| `auth/config.py`              | `fastapi-login` `LoginManager` instance, cookie parameters                  |
+| `auth/dependencies.py`        | `load_user` (token → user) and `get_current_user` dependency                |
+| `auth/password.py`            | `bcrypt` password hashing/verification                                      |
+| `models/station.py`           | Station CRUD, full-text name search, nearest-station geo query, soft delete |
+| `models/station_service.py`   | Per-station price list CRUD + aggregated price ranges                       |
+| `models/user.py`              | User lookup/creation                                                        |
+| `models/token.py`             | Session token persistence (DB-backed, not stateless JWT-only)               |
+| `../exceptions/exceptions.py` | Centralized `HTTPException` instances reused across routers                 |
 
 ## Data Model Summary
 

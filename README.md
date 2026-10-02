@@ -12,6 +12,18 @@ and related services. Uses SQLAlchemy + Alembic on top of MariaDB.
 - **Auth:** JWT (PyJWT) + `fastapi-login`, password hashing via `argon2-cffi` / `passlib`
 - **Containerization:** Docker & Docker Compose
 
+## Documentation
+
+| Doc                                              | Covers                                               |
+|--------------------------------------------------|------------------------------------------------------|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)     | Request flow, layering, module responsibilities      |
+| [docs/DATABASE.md](docs/DATABASE.md)             | Schema, tables, migrations                           |
+| [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) | JWT + cookie + DB-backed session design              |
+| [docs/API.md](docs/API.md)                       | Endpoint reference                                   |
+| [docs/TESTING.md](docs/TESTING.md)               | How the test suite works, coverage, adding tests     |
+| [docs/ISSUES.md](docs/ISSUES.md)                 | Known issues, security findings, improvement backlog |
+| [docs/INSTALL.md](docs/INSTALL.md)               | Full installation guide (Docker & native)            |
+
 ## Project Structure
 
 ```
@@ -23,14 +35,16 @@ kws_station_api/
 ├── routers/            # FastAPI route handlers (auth, customer, service, stations)
 ├── scripts/            # One-off/utility scripts (create_user, fake_stations)
 ├── tests/              # Test suite
-├── validation/         # Pydantic request/response schemas
-├── config.py           # Centralized application configuration
+├── validations/        # Pydantic request/response schemas
+├── config/             # Centralized application configuration (Config dataclass)
+├── exceptions/         # Shared HTTPException instances reused across routers
 ├── main.py             # FastAPI application entrypoint
 ├── docker/
 │   └── api/            # API container stack (extend with docker/<service>/ as needed)
 │       ├── Dockerfile
 │       ├── docker-compose.yml   # API + MariaDB stack
 │       └── entrypoint.sh        # Waits for DB, runs migrations, starts Uvicorn
+├── docs/               # Architecture, database, auth, API, testing, issues docs
 ├── renovate.json        # Automated dependency update bot config
 └── Makefile             # Common dev/ops commands
 ```
@@ -83,24 +97,43 @@ Automated update PRs can also be produced by [Renovate](https://docs.renovatebot
 using the included [`renovate.json`](renovate.json), if a Renovate bot/runner
 is configured against this repository.
 
+## Testing
+
+```bash
+make test          # run the full suite (isolated SQLite, no DB server needed)
+make test-cov       # run with coverage summary (fails if < 80%)
+```
+
+See [docs/TESTING.md](docs/TESTING.md) for the full breakdown of what's
+covered and how fixtures work.
+
+## Known Issues & Backlog
+
+See [docs/ISSUES.md](docs/ISSUES.md) for security findings, correctness
+bugs, and an improvement backlog — including bugs found and fixed while
+building the test suite.
+
 ## Available Make Commands
 
-| Command                             | Description                                  |
-|-------------------------------------|----------------------------------------------|
-| `make docker-build`                 | Build (or rebuild) the API image             |
-| `make docker-up`                    | Start all services in the background         |
-| `make docker-up-build`              | Rebuild the API image and start all services |
-| `make docker-down`                  | Stop and remove all services                 |
-| `make docker-restart`               | Restart all services without rebuilding      |
-| `make docker-logs`                  | Tail logs from all services                  |
-| `make docker-ps`                    | Show status of the stack's containers        |
-| `make migrate-up`                   | Apply all pending migrations                 |
-| `make deps-update`                   | Recompile `requirements.txt` from `pyproject.toml` |
-| `make deps-update-package package="x"` | Upgrade a single package only            |
-| `make deps-outdated`                 | List installed packages with newer versions |
-| `make migrate-down`                 | Revert all migrations                        |
-| `make migrate-up-index index="1"`   | Apply a specific migration                   |
-| `make migrate-down-index index="1"` | Revert a specific migration                  |
+| Command                                | Description                                        |
+|----------------------------------------|----------------------------------------------------|
+| `make docker-build`                    | Build (or rebuild) the API image                   |
+| `make docker-up`                       | Start all services in the background               |
+| `make docker-up-build`                 | Rebuild the API image and start all services       |
+| `make docker-down`                     | Stop and remove all services                       |
+| `make docker-restart`                  | Restart all services without rebuilding            |
+| `make docker-logs`                     | Tail logs from all services                        |
+| `make docker-ps`                       | Show status of the stack's containers              |
+| `make migrate-up`                      | Apply all pending migrations                       |
+| `make deps-update`                     | Recompile `requirements.txt` from `pyproject.toml` |
+| `make deps-update-package package="x"` | Upgrade a single package only                      |
+| `make deps-outdated`                   | List installed packages with newer versions        |
+| `make migrate-down`                    | Revert all migrations                              |
+| `make migrate-up-index index="1"`      | Apply a specific migration                         |
+| `make migrate-down-index index="1"`    | Revert a specific migration                        |
+
+For testing commands (`make test`, `make test-cov`, `make test-cov-html`,
+`make test-file`), see [docs/TESTING.md](docs/TESTING.md).
 
 ## Configuration
 

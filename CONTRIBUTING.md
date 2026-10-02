@@ -52,7 +52,7 @@ expected workflow and code standards for this project.
 - When adding a new environment variable:
   1. Add it to `.env.example` with a safe placeholder/default.
   2. Document it in [docs/INSTALL.md](docs/INSTALL.md).
-  3. Read it via `config.py` (`Config` dataclass) rather than calling
+  3. Read it via `config/config.py` (`Config` dataclass) rather than calling
      `os.getenv()` directly elsewhere in the codebase.
 
 ## Database Migrations
