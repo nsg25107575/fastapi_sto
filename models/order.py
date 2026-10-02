@@ -42,7 +42,14 @@ class OrderModel(Base):
     )
 
     status: Mapped[OrderStatus] = mapped_column(
-        Enum(OrderStatus, native_enum=False, length=20),
+        # values_callable is required: without it, SQLAlchemy's Enum type
+        # persists/reads the member NAMES ("PENDING", "CONFIRMED", ...),
+        # not their .value ("pending", "confirmed", ...) -- but
+        # server_default below is set to .value (lowercase). That
+        # mismatch made every insert fail with "LookupError: 'pending'
+        # is not among the defined enum values" once the server default
+        # actually got exercised (i.e. the very first INSERT).
+        Enum(OrderStatus, native_enum=False, length=20, values_callable=lambda enum_cls: [e.value for e in enum_cls]),
         nullable=False,
         server_default=OrderStatus.PENDING.value,
     )

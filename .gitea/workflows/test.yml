@@ -40,8 +40,18 @@ jobs:
       # (shadowing alembic.ini and everything else COPY'd by the
       # Dockerfile). The CI file relies solely on what's baked into
       # the image.
+      #
+      # `down -v --remove-orphans` first: if a previous run was
+      # interrupted (runner restart, network outage, host power loss)
+      # before its own "Tear down stack" step could run, a stale
+      # container with the same fixed name (kws_station_api) is left
+      # behind and `up` fails outright with "Conflict: container name
+      # already in use" -- this makes every run self-healing instead of
+      # depending on the previous run having torn down cleanly.
       - name: Build & start stack
-        run: docker compose -f docker/api/docker-compose.ci.yml --project-directory . up -d --build
+        run: |
+          docker compose -f docker/api/docker-compose.ci.yml --project-directory . down -v --remove-orphans || true
+          docker compose -f docker/api/docker-compose.ci.yml --project-directory . up -d --build
 
       # 300s budget: pip/uv install + wait-for-db loop + ~15 Alembic
       # migrations + 4 Uvicorn workers starting + healthcheck
