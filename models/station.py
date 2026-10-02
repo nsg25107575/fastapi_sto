@@ -192,6 +192,9 @@ class StationModel(Base, SoftDeleteMixin):
         """
         station = cls.read_station(session, station_id)
 
+        if station is None:
+            return None
+
         for key, value in kwargs.items():
             if value is not None:
                 setattr(station, key, value)
@@ -207,6 +210,9 @@ class StationModel(Base, SoftDeleteMixin):
         """
         station = cls.read_station(session, station_id)
 
+        if station is None:
+            return None
+
         tz = ZoneInfo(Config.app_timezone)
         station.deleted_at = datetime.now(tz)
         session.flush()
@@ -218,7 +224,11 @@ class StationModel(Base, SoftDeleteMixin):
         """
         Restore the station with the given ID.
         """
-        station = cls.read_station(session, station_id)
+        # Must bypass the global soft-delete filter — otherwise a
+        # soft-deleted station (deleted_at IS NOT NULL) is invisible to
+        # read_station() and can never be found to restore.
+        stmt = select(cls).where(cls.id == station_id).execution_options(include_deleted=True)
+        station = session.scalars(stmt).first()
 
         if station is not None:
             station.deleted_at = None
