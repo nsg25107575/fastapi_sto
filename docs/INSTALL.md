@@ -150,10 +150,37 @@ project root, so the stack can be extended later with additional services
    uvicorn main:app --reload
    ```
 
-## 5. Keeping Dependencies Up to Date
+## 5. Dependency Tooling (`pip` & `uv`)
+
+Two tools manage Python packages for this project — **neither is listed
+in `pyproject.toml`'s `dependencies`**, because they are developer/build
+tooling, not something the application imports or runs with at runtime:
+
+- **`pip`** — comes bundled with every Python installation/virtualenv (`python -m venv .venv` already includes it). You
+  normally don't need
+  to install it separately; if it's ever missing from a venv, restore it
+  with:
+  ```bash
+  python -m ensurepip --upgrade
+  ```
+- **`uv`** ([astral-sh/uv](https://github.com/astral-sh/uv)) — only
+  needed to compile `requirements.txt` from `pyproject.toml`
+  (`make deps-update`, `make deps-update-package`). It is **not** required
+  to run the app, run tests, or build the Docker image. Install it once
+  into your virtualenv with:
+  ```bash
+  pip install uv
+  ```
+  The `make deps-update*` targets also auto-install `uv` into the active
+  venv on first use if it isn't already present, so this manual step is
+  optional.
+
+## 6. Keeping Dependencies Up to Date
 
 `requirements.txt` is a **compiled, pinned lockfile** generated from the
-version ranges/pins declared in `pyproject.toml` (via `uv pip compile`).
+version ranges declared in `pyproject.toml` (via `uv pip compile`; see
+[Dependency Tooling](#5-dependency-tooling-pip--uv) above for how `uv`
+itself is installed).
 Do not hand-edit it — regenerate it instead:
 
 ```bash
@@ -176,7 +203,7 @@ bot/runner against their Git server — it will open update PRs/MRs
 automatically on a weekly schedule. It is inactive unless such a runner is
 configured.
 
-## 6. Verifying the Installation
+## 7. Verifying the Installation
 
 - Open `http://localhost:${APP_PORT}/docs` in a browser — you should see the
   Swagger UI.
