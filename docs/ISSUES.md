@@ -294,3 +294,45 @@ on Windows).
   80%) — see [TESTING.md](TESTING.md#coverage).
 - ✅ Added `make test`, `make test-verbose`, `make test-cov`,
   `make test-cov-html`, `make test-file` targets to the `Makefile`.
+
+## Running Tests Inside Docker (2026-10-02)
+
+**Problem:** tests could only run against the local `.venv`, so every
+local-environment issue (missing `pip`/`uv`, a package accidentally
+uninstalled, wrong Python version) blocked testing entirely — even
+though the `api` container already has a clean, reproducible
+environment built from `requirements.txt`.
+
+**Fix, two parts:**
+
+1. `.dockerignore` was excluding `tests/` from the build context, so
+   even if you wanted to run tests in the container, they weren't
+   there. Removed that line (and excluded coverage artifacts instead —
+   `htmlcov/`, `.coverage`, `coverage.xml` — which don't belong in an
+   image).
+2. `docker/api/entrypoint.sh` had **CRLF line endings** (likely from a
+   Windows checkout/edit), which broke its `#!/bin/sh` shebang entirely
+   inside the Linux container (`exec .../entrypoint.sh: no such file
+   or directory`, endless restart loop). Fixed the line endings and
+   added [`.gitattributes`](../.gitattributes) to force `eol=lf` for
+   `*.sh`, `Makefile`, `Dockerfile`, and `*.py` so Git never
+   reintroduces CRLF on a Windows checkout again.
+
+Initially added as separate `make docker-test*` targets alongside a
+local/.venv-based `make test*`; later consolidated into a single set —
+`make test`, `make test-cov`, `make test-verbose`, `make test-cov-html`,
+`make test-file` — that **always** run inside the `api` container via
+`docker compose exec api python -m pytest ...`. There is intentionally
+no local/.venv test path anymore: testing the container that actually
+ships is the only thing that matters, and it removes any class of
+"works on my machine" environment drift entirely. See
+[TESTING.md](TESTING.md).
+
+**Bonus bug caught by this:** running tests inside the container
+immediately failed with every authenticated endpoint returning 401,
+because `tests/conftest.py` used `os.environ.setdefault(...)` for
+`COOKIES_SECURE` etc. — which does nothing when `docker-compose.yml`
+already injected a real value as an OS-level env var before Python
+started. Switched to forcibly overwriting (`os.environ[...] = ...`)
+instead, making the test environment identical on bare host and in
+container.
