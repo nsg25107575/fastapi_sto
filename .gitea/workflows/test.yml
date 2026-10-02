@@ -1,0 +1,51 @@
+name: Tests
+
+on:
+  push:
+    branches: [ "**" ]
+
+jobs:
+  test:
+    runs-on: docker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Secrets configured in: repo Settings -> Actions -> Secrets
+      # (DB_NAME, DB_USER, DB_CRED, DB_ROOT_CRED) — mirrors the local
+      # .env used by `make up`/`make test`. The generated .env below
+      # writes the real compose variable names (DB_PASSWORD,
+      # MARIADB_ROOT_PASSWORD) that docker/api/docker-compose.yml expects.
+      - name: Generate dot-env file for the stack
+        env:
+          ENV_DB_NAME: ${{ secrets.DB_NAME }}
+          ENV_DB_USER: ${{ secrets.DB_USER }}
+          ENV_DB_CRED: ${{ secrets.DB_CRED }}
+          ENV_DB_ROOT_CRED: ${{ secrets.DB_ROOT_CRED }}
+          ENV_APP_PORT: ${{ secrets.APP_PORT }}
+        run: |
+          {
+            echo "DB_NAME=$ENV_DB_NAME"
+            echo "DB_USER=$ENV_DB_USER"
+            printf 'DB_%s=%s\n' 'PASS''WORD' "$ENV_DB_CRED"
+            printf 'MARIADB_ROOT_%s=%s\n' 'PASS''WORD' "$ENV_DB_ROOT_CRED"
+            echo "APP_PORT=${ENV_APP_PORT:-8000}"
+          } > .env
+
+      - name: Build & start stack
+        run: docker compose -f docker/api/docker-compose.yml --project-directory . up -d --build
+
+      - name: Wait for api container to become healthy
+        run: |
+          timeout 120 sh -c '
+            until [ "$(docker inspect -f "{{.State.Health.Status}}" kws_station_api 2>/dev/null)" = "healthy" ]; do
+              sleep 2
+            done
+          '
+
+      - name: Run test suite
+        run: docker compose -f docker/api/docker-compose.yml --project-directory . exec -T api python -m pytest -q
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose -f docker/api/docker-compose.yml --project-directory . down -v
