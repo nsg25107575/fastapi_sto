@@ -52,7 +52,7 @@ class Config:
     jwt_expires_in: int = int(os.getenv("JWT_EXPIRES_IN", 3600))
 
     # Cookies configuration
-    cookie_secret: str = os.getenv("COOKIES_SECRET_KEY", "supersecretkey") # TODO: change to a secure key in production
+    cookie_secret: str = os.getenv("COOKIES_SECRET_KEY", "supersecretkey")  # TODO: change to a secure key in production
     cookie_secure: bool = bool(os.getenv("COOKIES_SECURE", False))  # TODO: change to True for HTTPS in production
     max_cookie_lifetime_in_days: int = int(os.getenv("MAX_COOKIE_AGE_IN_DAYS", 7))
 
