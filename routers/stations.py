@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from auth.dependencies import get_current_user
 from config import Config
 from database.engine import get_session
-from exceptions import DuplicateStationException, InvalidCoordinateException, StationNotFoundException
+from exceptions import DuplicateStationException, GeocodingFailedException, InvalidCoordinateException, StationNotFoundException
+from services.geocoding import GeocodingError, geocode_address
 from models.station import StationModel
 from models.user import UserModel
 from validations.station import StationCreateSchema, StationUpdateSchema, StationResponseSchema, \
@@ -23,6 +24,15 @@ def add_station(
         current_user: UserModel = Depends(get_current_user),
         session: Session = Depends(get_session)
 ):
+    # Resolve the address to coordinates up front, before touching the
+    # DB -- so a geocoding failure never leaves a half-created station
+    # (one with a name/address but no lat/lng, invisible to
+    # GET /stations/nearest) that a client has no way to retry/fix.
+    try:
+        latitude, longitude = geocode_address(payload.address)
+    except GeocodingError:
+        raise GeocodingFailedException
+
     try:
         station = StationModel.create_station(
             session=session,
@@ -30,6 +40,8 @@ def add_station(
             name=payload.name,
             address=payload.address
         )
+        station.latitude = latitude
+        station.longitude = longitude
         session.commit()
         return station
     except IntegrityError:
@@ -71,12 +83,24 @@ def update_station(
         current_user: UserModel = Depends(get_current_user),
         session: Session = Depends(get_session)
 ):
+    update_fields = payload.model_dump(exclude_none=True)
+
+    # Re-geocode whenever the address changes -- otherwise latitude/
+    # longitude would silently keep pointing at the OLD address, and
+    # GET /stations/nearest would return a station at the wrong location.
+    if "address" in update_fields:
+        try:
+            latitude, longitude = geocode_address(update_fields["address"])
+        except GeocodingError:
+            raise GeocodingFailedException
+        update_fields["latitude"] = latitude
+        update_fields["longitude"] = longitude
+
     try:
-        # Pass a dictionary with parameters via **kwargs
         station = StationModel.update_station(
             session=session,
             station_id=station_id,
-            **payload.model_dump(exclude_none=True)  # Uses dynamic updates from model
+            **update_fields
         )
 
         if station is None:

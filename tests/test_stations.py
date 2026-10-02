@@ -1,5 +1,7 @@
 """Tests for POST/GET/PUT/DELETE /stations and /stations/nearest."""
 
+import pytest
+
 
 def test_create_station_requires_auth(client):
     response = client.post("/stations/", json={"name": "Test STO", "address": "1 Main St"})
@@ -22,6 +24,43 @@ def test_create_station_success(auth_client):
     assert "id" in data
 
 
+def test_create_station_geocodes_address(auth_client, db_session):
+    """POST /stations resolves the address to coordinates via the
+    geocoding service (stubbed in conftest.py's autouse fixture) and
+    persists them -- without this, the station would be invisible to
+    GET /stations/nearest (which requires non-null lat/lng)."""
+    client, _user = auth_client
+
+    response = client.post(
+        "/stations/",
+        json={"name": "Geocoded STO", "address": "1 Khreshchatyk St, Kyiv"},
+    )
+    assert response.status_code == 201, response.text
+
+    from models.station import StationModel
+
+    station = StationModel.read_station(db_session, response.json()["id"])
+    assert station.latitude == pytest.approx(50.4501)
+    assert station.longitude == pytest.approx(30.5234)
+
+
+def test_create_station_returns_400_when_geocoding_fails(auth_client, monkeypatch):
+    from services.geocoding import GeocodingError
+
+    monkeypatch.setattr(
+        "routers.stations.geocode_address",
+        lambda address: (_ for _ in ()).throw(GeocodingError("no results")),
+    )
+    client, _user = auth_client
+
+    response = client.post(
+        "/stations/",
+        json={"name": "Unresolvable STO", "address": "nowhere in particular"},
+    )
+
+    assert response.status_code == 400
+
+
 def test_create_duplicate_station_returns_409(auth_client):
     client, _user = auth_client
     payload = {"name": "Duplicate STO", "address": "2 Main St"}
@@ -31,6 +70,47 @@ def test_create_duplicate_station_returns_409(auth_client):
 
     second = client.post("/stations/", json=payload)
     assert second.status_code == 409
+
+
+def test_update_station_address_regeocodes(auth_client, db_session):
+    """PUT /stations/{id} re-resolves coordinates when `address`
+    changes -- otherwise lat/lng would silently keep pointing at the
+    OLD address."""
+    client, _user = auth_client
+    created = client.post(
+        "/stations/", json={"name": "Movable STO", "address": "Old Address"}
+    ).json()
+
+    response = client.put(
+        f"/stations/{created['id']}",
+        json={"address": "1 Khreshchatyk St, Kyiv"},
+    )
+    assert response.status_code == 200, response.text
+
+    from models.station import StationModel
+
+    station = StationModel.read_station(db_session, created["id"])
+    assert station.address == "1 Khreshchatyk St, Kyiv"
+    assert station.latitude == pytest.approx(50.4501)
+    assert station.longitude == pytest.approx(30.5234)
+
+
+def test_update_station_without_address_change_skips_geocoding(auth_client, monkeypatch):
+    """Updating unrelated fields (e.g. `active`) must NOT trigger a
+    geocoding call at all."""
+    client, _user = auth_client
+    created = client.post(
+        "/stations/", json={"name": "Stable STO", "address": "Stable St"}
+    ).json()
+
+    def _fail_if_called(address):
+        raise AssertionError("geocode_address should not be called when address is unchanged")
+
+    monkeypatch.setattr("routers.stations.geocode_address", _fail_if_called)
+
+    response = client.put(f"/stations/{created['id']}", json={"active": False})
+
+    assert response.status_code == 200, response.text
 
 
 def test_get_stations_lists_all(auth_client):

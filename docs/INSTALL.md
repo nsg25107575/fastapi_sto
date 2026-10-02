@@ -32,6 +32,9 @@ cp .env.example .env
 | `APP_ENV`                   | Environment name (`development`/`production`)               | `development`                 |
 | `APP_TIMEZONE`              | Timezone used for timestamps                                | `Europe/Kyiv`                 |
 | `APP_NEAREST_STATION_LIMIT` | Default limit for "nearest stations" search                 | `10`                          |
+| `GEOCODING_BASE_URL`        | Address-to-coordinates provider endpoint (used by `POST /stations`) | `https://nominatim.openstreetmap.org/search` |
+| `GEOCODING_USER_AGENT`      | User-Agent sent to the geocoding provider (required by Nominatim's usage policy) | `kws-station-api/1.0` |
+| `GEOCODING_TIMEOUT`         | Geocoding HTTP request timeout, in seconds                  | `5`                            |
 | `DB_HOST`                   | Database host (use `db` for Docker, `localhost` for native) | `db`                          |
 | `DB_PORT`                   | Database port exposed on the host                           | `3306`                        |
 | `DB_NAME`                   | Database name                                               | `station_db`                  |

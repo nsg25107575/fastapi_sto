@@ -14,6 +14,7 @@ from exceptions.exceptions import (
     TokenExpiredException,
     OrderNotFoundException,
     InvalidOrderServiceException,
+    GeocodingFailedException,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "TokenExpiredException",
     "OrderNotFoundException",
     "InvalidOrderServiceException",
+    "GeocodingFailedException",
 ]

@@ -119,6 +119,20 @@ def client():
     app.dependency_overrides.clear()
 
 
+@pytest.fixture(autouse=True)
+def _stub_geocoding(monkeypatch):
+    """Autouse so no test needs to opt in explicitly: `POST /stations`
+    now geocodes the address (see routers/stations.py), and the suite
+    must never make a real network call to the Nominatim API. Returns a
+    fixed Kyiv coordinate for any address; tests that need a specific
+    other geocoding behavior (success/failure) override this directly,
+    see tests/test_geocoding.py."""
+    monkeypatch.setattr(
+        "routers.stations.geocode_address",
+        lambda address: (50.4501, 30.5234),
+    )
+
+
 # --- Shared factory fixtures -------------------------------------------------
 
 @pytest.fixture

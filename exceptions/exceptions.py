@@ -42,3 +42,9 @@ InvalidOrderServiceException = HTTPException(
     detail="The specified service does not belong to the specified station",
     headers={"WWW-Authenticate": "Bearer"},
 )
+
+GeocodingFailedException = HTTPException(
+    status_code=HTTP_400_BAD_REQUEST,
+    detail="Could not resolve coordinates for the given address",
+    headers={"WWW-Authenticate": "Bearer"},
+)

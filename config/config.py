@@ -43,6 +43,14 @@ class Config:
     # App configuration for search
     app_nearest_stations_limit: int = int(os.getenv("APP_NEAREST_STATION_LIMIT", 10))
 
+    # Geocoding (address -> lat/lng) configuration, used when creating a
+    # station so its coordinates don't have to be set manually. Defaults
+    # to the free OpenStreetMap Nominatim endpoint; a descriptive
+    # User-Agent is required by Nominatim's usage policy.
+    geocoding_base_url: str = os.getenv("GEOCODING_BASE_URL", "https://nominatim.openstreetmap.org/search")
+    geocoding_user_agent: str = os.getenv("GEOCODING_USER_AGENT", "kws-station-api/1.0")
+    geocoding_timeout: float = float(os.getenv("GEOCODING_TIMEOUT", 5))
+
     # DB configuration
     db_url: str = _build_db_url()
 
