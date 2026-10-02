@@ -1,0 +1,8 @@
+# Force LF line endings for files that run inside Linux containers or
+# are executed as shell scripts — Git on Windows otherwise checks these
+# out with CRLF, which breaks the `#!/bin/sh` shebang at container start
+# ("exec /usr/local/bin/entrypoint.sh: no such file or directory").
+*.sh text eol=lf
+Makefile text eol=lf
+Dockerfile text eol=lf
+*.py text eol=lf
