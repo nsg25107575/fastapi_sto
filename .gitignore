@@ -36,4 +36,9 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# Test coverage artifacts
+.coverage
+htmlcov/
+coverage.xml
 /.coverage
