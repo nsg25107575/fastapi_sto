@@ -43,4 +43,9 @@ dependencies = [
     # work out of the box without a separate dev-dependency group)
     "pytest>=9.1.1,<10.0.0",
     "pytest-cov>=7.1.0,<8.0.0",
+    # httpx: not imported directly anywhere in application code, but
+    # required at runtime by `fastapi.testclient.TestClient` (used in
+    # every integration test's `client`/`auth_client` fixture). Easy to
+    # miss in a static import scan — keep it listed explicitly.
+    "httpx>=0.28.1,<1.0.0",
 ]
