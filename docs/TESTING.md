@@ -69,6 +69,11 @@ JWT/cookie secrets) before anything else is imported.
 > HTTP requests and makes every authenticated test fail with 401 — this
 > was a real bug caught by actually running tests inside the container.
 
+Running `make test`/`make test-cov` produces **zero warnings** on a
+clean build. If you see any (e.g. `PydanticDeprecatedSince20`,
+`StarletteDeprecationWarning`, `InsecureKeyLengthWarning`), fix the root
+cause rather than suppressing — see [ISSUES.md](ISSUES.md) for examples.
+
 ## Test Layout
 
 | File                                  | Scope                                                                                                                                        |
