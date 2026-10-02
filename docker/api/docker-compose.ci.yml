@@ -1,0 +1,101 @@
+# Standalone CI compose file for Gitea Actions — NOT an override of
+# docker-compose.yml, to avoid relying on Compose's merge semantics for
+# list-type keys (volumes/ports are appended, not replaced, when using
+# multiple -f files unless the newer `!reset`/`!override` YAML tags are
+# used — safer to just maintain one explicit file for CI).
+#
+# Why this file exists: the base docker-compose.yml bind-mounts the
+# repo root into the container (`volumes: - .:/app`) for local dev
+# hot-reload. In Gitea Actions, the job itself runs inside a job
+# container (DooD — the runner shares the host's /var/run/docker.sock).
+# When that job container invokes `docker compose up`, the Docker
+# daemon on the HOST resolves `.` against the job container's own
+# internal path (e.g. /workspace/KWS/kws_station_api), which doesn't
+# exist on the host — so the daemon silently creates an empty
+# directory there and mounts THAT into /app, shadowing everything the
+# image's `COPY . .` already baked in (including alembic.ini). Result:
+# `alembic upgrade head` fails with "No 'script_location' key found in
+# configuration."
+#
+# Fix: for CI, drop the bind mount entirely and rely on the code
+# already copied into the image by the Dockerfile.
+#
+# Usage (see .gitea/workflows/test.yml):
+#   docker compose -f docker/api/docker-compose.ci.yml --project-directory . up -d --build
+#   docker compose -f docker/api/docker-compose.ci.yml --project-directory . exec -T api python -m pytest -q
+#   docker compose -f docker/api/docker-compose.ci.yml --project-directory . down -v
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    container_name: kws_station_api
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "mariadb+mariadbconnector://db:${DB_PORT:-3306}/${DB_NAME}"
+      DB_HOST: db
+      APP_PORT: "${APP_PORT:-8000}"
+      UVICORN_WORKERS: "4"
+      UVICORN_LIMIT_CONCURRENCY: "1000"
+      UVICORN_BACKLOG: "2048"
+      UVICORN_KEEPALIVE: "5"
+      DB_POOL_SIZE: "10"
+      DB_POOL_MAX_OVERFLOW: "20"
+      DB_POOL_TIMEOUT: "30"
+      DB_POOL_RECYCLE: "1800"
+    ports:
+      - "${APP_PORT:-8000}:${APP_PORT:-8000}"
+    depends_on:
+      db:
+        condition: service_healthy
+    # NOTE: no `volumes: - .:/app` here on purpose — see header comment.
+    networks:
+      - kws_station_net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  db:
+    image: mariadb:latest
+    container_name: kws_station_db
+    restart: "no"
+    env_file:
+      - .env
+    # Flow-style mapping (one line) for the two credential vars — the
+    # MariaDB image's own entrypoint requires these exact variable
+    # names (MARIADB_ROOT_PASSWORD / MARIADB_PASSWORD), they cannot be
+    # renamed. Values still come from .env via ${...} substitution.
+    environment: {
+      MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}",
+      MARIADB_DATABASE: "${DB_NAME}",
+      MARIADB_USER: "${DB_USER}",
+      MARIADB_PASSWORD: "${DB_PASSWORD}"
+    }
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - kws_station_db_data_ci:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - kws_station_net
+
+volumes:
+  kws_station_db_data_ci:
+
+networks:
+  kws_station_net:
+    driver: bridge
