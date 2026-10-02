@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from database.engine import get_session
 from models.customer import CustomerModel
-from validation.customer import CustomerCreate, CustomerResponse
+from validations.customer import CustomerCreate, CustomerResponse
 
 router = APIRouter(
     prefix="/customer",

@@ -8,7 +8,7 @@ from database.engine import get_session
 from exceptions import DuplicateStationException, InvalidCoordinateException, StationNotFoundException
 from models.station import StationModel
 from models.user import UserModel
-from validation.station import StationCreateSchema, StationUpdateSchema, StationResponseSchema, \
+from validations.station import StationCreateSchema, StationUpdateSchema, StationResponseSchema, \
     NearestStationResponseSchema, NearestStationsSchema
 
 router = APIRouter(
