@@ -209,8 +209,10 @@ configured.
   Swagger UI.
 - Run the test suite:
   ```bash
-  pytest
+  make test
   ```
+  Tests always run inside the `api` container, not on the host — see
+  [TESTING.md](TESTING.md). The container must already be up (`make up-build` from step 3).
 
 ## Troubleshooting
 
