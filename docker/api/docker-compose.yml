@@ -5,6 +5,13 @@
 # (the Makefile targets already do this). --project-directory . is required
 # so that Compose resolves .env, build context, and volume paths below
 # relative to the repo root instead of docker/api/.
+#
+# This base file is fully self-contained and has NO external network
+# dependency — it works out of the box on any machine (local dev,
+# CI image build, etc.). The production-only requirement (joining the
+# kws stack's `kws_default` network so Nginx Proxy Manager can reach
+# this container by name) lives in docker-compose.prod.yml, applied
+# only when deploying — see that file's header comment for why.
 services:
   api:
     build:
@@ -25,7 +32,7 @@ services:
       UVICORN_BACKLOG: "2048"
       UVICORN_KEEPALIVE: "5"
       # Per-worker SQLAlchemy pool; total DB connections used by this
-      # service - UVICORN_WORKERS * (DB_POOL_SIZE + DB_POOL_MAX_OVERFLOW).
+      # service scales as UVICORN_WORKERS * (DB_POOL_SIZE + DB_POOL_MAX_OVERFLOW).
       DB_POOL_SIZE: "10"
       DB_POOL_MAX_OVERFLOW: "20"
       DB_POOL_TIMEOUT: "30"
@@ -39,13 +46,6 @@ services:
       - .:/app
     networks:
       - kws_station_net
-      # Joins the kws stack's own network (postgres_db, gitea, redmine,
-      # nginx-proxy-manager) so Nginx Proxy Manager can reach this
-      # container directly by name (http://kws_station_api:8000)
-      # instead of relying on the host's 0.0.0.0 bridge IP, which NPM
-      # (itself a container) cannot resolve - that caused the
-      # 502 Bad Gateway on sto.kirweb.space.
-      - kws_default
     deploy:
       resources:
         limits:
@@ -127,9 +127,3 @@ volumes:
 networks:
   kws_station_net:
     driver: bridge
-  # Pre-existing network from the kws stack (docker-compose.yml at
-  # ~/kws/) - must already exist on the host (created by the kws
-  # stack itself). external: true tells Compose to attach to it
-  # rather than try to create/manage it.
-  kws_default:
-    external: true
