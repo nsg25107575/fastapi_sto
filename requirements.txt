@@ -93,5 +93,7 @@ typing-inspection==0.4.4
     # via
     #   fastapi
     #   pydantic
+tzdata==2026.4
+    # via kws-station-api (pyproject.toml)
 uvicorn==0.54.0
     # via kws-station-api (pyproject.toml)
