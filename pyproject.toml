@@ -2,47 +2,38 @@
 name = "kws-station-api"
 version = "0.1.0"
 requires-python = ">=3.14"
+# Only DIRECT dependencies (actually imported by application code) are
+# listed here. Transitive dependencies (click, h11, idna, cffi, mako,
+# greenlet, anyio, httpcore, httpx, annotated-types, etc.) are resolved
+# automatically and pinned exactly in requirements.txt — do not add them
+# here manually.
+#
+# Version ranges use `>=current,<next-major` (SemVer-style compatible
+# release) instead of `==exact` so `make deps-update` can pick up new
+# minor/patch releases automatically. A library's own major-version bump
+# is excluded on purpose — those are allowed to contain breaking changes
+# and should be reviewed/upgraded deliberately (bump the upper bound by
+# hand after testing).
 dependencies = [
-    "alembic==1.20.0",
-    "annotated-doc==0.0.5",
-    "annotated-types==0.8.0",
-    "anyio==4.15.1",
-    "argon2-cffi==25.1.0",
-    "argon2-cffi-bindings==26.1.0",
-    "bcrypt==5.0.0",
-    "certifi==2026.7.22",
-    "cffi==2.1.1",
-    "click==8.5.0",
-    "dnspython==2.8.0",
-    "email-validator==2.3.0",
-    "fastapi==0.141.1",
-    "fastapi-login==1.10.3",
-    "greenlet==3.5.6",
-    "h11==0.16.0",
-    "httpcore==1.0.9",
-    "httpx==0.28.1",
-    "idna==3.20",
-    "iniconfig==2.3.0",
-    "mako==1.4.1",
-    "mariadb==1.1.14",
-    "markupsafe==3.0.3",
-    "packaging==26.3",
-    "passlib==1.7.4",
-    "pip==26.2.1",
-    "pluggy==1.6.0",
-    "pwdlib==0.3.1",
-    "pycparser==3.0",
-    "pydantic==2.13.5",
-    "pydantic-core==2.46.5",
-    "pygments==2.21.0",
-    "pyjwt==2.14.0",
-    "pytest==9.1.1",
-    "python-dotenv==1.2.3",
-    "services==0.1.1",
-    "sqlalchemy==2.0.54",
-    "starlette==1.6.0",
-    "typing-extensions==4.16.0",
-    "typing-inspection==0.4.4",
-    "uv==0.12.16",
-    "uvicorn==0.53.0",
+    # Web framework & server
+    "fastapi>=0.142.2,<1.0.0",
+    "starlette>=1.7.0,<2.0.0",
+    "uvicorn>=0.54.0,<1.0.0",
+    # Validation
+    "pydantic>=2.13.5,<3.0.0",
+    "email-validator>=2.3.0,<3.0.0",
+    # Database / ORM / migrations
+    "sqlalchemy>=2.1.2,<3.0.0",
+    "alembic>=1.20.0,<2.0.0",
+    "mariadb>=1.1.14,<2.0.0",
+    # Auth
+    "fastapi-login>=1.10.3,<2.0.0",
+    "pyjwt>=2.15.1,<3.0.0",
+    "bcrypt>=5.0.0,<6.0.0",
+    # Config
+    "python-dotenv>=1.2.4,<2.0.0",
+    # Testing (kept as a direct dependency so `make test`/`make test-cov`
+    # work out of the box without a separate dev-dependency group)
+    "pytest>=9.1.1,<10.0.0",
+    "pytest-cov>=7.1.0,<8.0.0",
 ]
