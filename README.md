@@ -9,7 +9,7 @@ and related services. Uses SQLAlchemy + Alembic on top of MariaDB.
 - **Framework:** FastAPI (served via Uvicorn)
 - **Database:** MariaDB (via the `mariadb` connector / SQLAlchemy)
 - **Migrations:** Alembic
-- **Auth:** JWT (PyJWT) + `fastapi-login`, password hashing via `argon2-cffi` / `passlib`
+- **Auth:** JWT (PyJWT) + `fastapi-login`, password hashing via `bcrypt`
 - **Containerization:** Docker & Docker Compose
 
 ## Documentation
@@ -84,14 +84,28 @@ uvicorn main:app --reload
 
 ## Keeping Dependencies Up to Date
 
-`requirements.txt` is a pinned, compiled lockfile generated from
-`pyproject.toml`. To refresh it:
+`pyproject.toml` lists only **direct** dependencies (packages actually
+imported by application code) using compatible-release ranges (`>=current,<next-major>`) — e.g.
+`fastapi>=0.142.2,<1.0.0`. This lets
+patch/minor releases be picked up automatically; a library's own
+major-version bump still requires a deliberate, tested decision (raise
+the upper bound by hand after verifying the suite passes).
+
+`requirements.txt` is the fully-pinned (`==`), reproducible lockfile
+compiled *from* `pyproject.toml` — it also pins every transitive
+dependency (not declared by hand). To refresh it:
 
 ```bash
 make deps-update                        # upgrade everything within pyproject.toml constraints
 make deps-update-package package="fastapi"   # upgrade a single package
 make deps-outdated                       # list packages with newer versions available
 ```
+
+After running `make deps-update`, always run `make test-cov` before
+committing — if a minor/patch bump breaks something, pin that one
+package back down in `pyproject.toml` and document why in
+[docs/ISSUES.md](docs/ISSUES.md) (see the "Dependency Audit" section for
+an example of this workflow).
 
 Automated update PRs can also be produced by [Renovate](https://docs.renovatebot.com/)
 using the included [`renovate.json`](renovate.json), if a Renovate bot/runner
