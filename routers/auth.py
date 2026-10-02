@@ -11,7 +11,7 @@ from database.engine import engine
 from exceptions import DuplicateEmailException
 from models.token import TokenModel
 from models.user import UserModel
-from validation.user import UserCreateSchema, UserLoginSchema
+from validations.user import UserCreateSchema, UserLoginSchema
 
 router = APIRouter(
     prefix="/auth",
@@ -74,7 +74,7 @@ def sign_in(credentials: UserLoginSchema) -> JSONResponse:
         # Searching for a user via a pure function or a query
         user = session.query(UserModel).filter(UserModel.email == credentials.email).first()
 
-        # Password validation
+        # Password validations
         if not user or not verify_password(credentials.password, user.password):
             raise InvalidCredentialsException
 
