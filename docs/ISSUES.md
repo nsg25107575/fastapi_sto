@@ -336,3 +336,35 @@ already injected a real value as an OS-level env var before Python
 started. Switched to forcibly overwriting (`os.environ[...] = ...`)
 instead, making the test environment identical on bare host and in
 container.
+
+## Fixing Test Warnings (2026-10-02)
+
+**Problem:** `make test` produced 52 warnings across the suite:
+`StarletteDeprecationWarning` (TestClient wants httpx2), 5×
+`PydanticDeprecatedSince20` (class-based `Config` instead of
+`ConfigDict`), and `InsecureKeyLengthWarning` (HMAC key under 32 bytes)
+from PyJWT on every signed/decoded token.
+
+**Fixes (all resolved properly, not suppressed):**
+
+1. **`StarletteDeprecationWarning`** — `fastapi.testclient.TestClient` is
+   now built on `httpx2`; plain `httpx` is deprecated for this purpose.
+   Added `httpx2>=2.13.1,<3.0.0` as a direct dependency (alongside the
+   still-needed `httpx`) and rebuilt the image (`make up-build`) so
+   TestClient picks it up automatically.
+2. **`PydanticDeprecatedSince20`** (×5, in `validations/customer.py`,
+   `service.py`, `station.py`) — class-based `class Config:
+   from_attributes = True` is deprecated since Pydantic V2.0. Replaced
+   with `model_config = ConfigDict(from_attributes=True)` in every
+   affected schema.
+3. **`InsecureKeyLengthWarning`** — `auth/config.py`'s `LoginManager` is
+   keyed off `Config.cookie_secret` (`COOKIES_SECRET_KEY`), not
+   `JWT_SECRET_KEY` as one might assume from the name. The test secrets
+   in `tests/conftest.py` were only 18–34 bytes; PyJWT requires ≥32 bytes
+   for HS256 HMAC keys. Lengthened both `JWT_SECRET_KEY` and
+   `COOKIES_SECRET_KEY` test values to ≥32 bytes.
+
+**Result:** `make test` / `make test-cov` now produce **zero warnings**
+(verified by also running with `-W error::DeprecationWarning -W
+error::PendingDeprecationWarning`, which would fail the suite if any
+remained) — 89 passed, 96.4% coverage, clean output.
