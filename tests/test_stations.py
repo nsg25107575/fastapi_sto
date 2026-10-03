@@ -40,8 +40,10 @@ def test_create_station_geocodes_address(auth_client, db_session):
     from models.station import StationModel
 
     station = StationModel.read_station(db_session, response.json()["id"])
-    assert station.latitude == pytest.approx(50.4501)
-    assert station.longitude == pytest.approx(30.5234)
+    # Numeric(16,14) columns round-trip as decimal.Decimal, not float --
+    # pytest.approx can't subtract float from Decimal directly.
+    assert float(station.latitude) == pytest.approx(50.4501)
+    assert float(station.longitude) == pytest.approx(30.5234)
 
 
 def test_create_station_returns_400_when_geocoding_fails(auth_client, monkeypatch):
@@ -91,8 +93,8 @@ def test_update_station_address_regeocodes(auth_client, db_session):
 
     station = StationModel.read_station(db_session, created["id"])
     assert station.address == "1 Khreshchatyk St, Kyiv"
-    assert station.latitude == pytest.approx(50.4501)
-    assert station.longitude == pytest.approx(30.5234)
+    assert float(station.latitude) == pytest.approx(50.4501)
+    assert float(station.longitude) == pytest.approx(30.5234)
 
 
 def test_update_station_without_address_change_skips_geocoding(auth_client, monkeypatch):
