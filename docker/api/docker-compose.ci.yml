@@ -43,7 +43,10 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: "mariadb+mariadbconnector://db:${DB_PORT:-3306}/${DB_NAME}"
+      # Must include ${DB_USER}:${DB_PASSWORD}@ -- without it, the
+      # mariadb driver defaults to connecting as root with no password,
+      # which MariaDB rejects ("Access denied for user 'root'@...").
+      DATABASE_URL: "mariadb+mariadbconnector://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT:-3306}/${DB_NAME}"
       DB_HOST: db
       APP_PORT: "${APP_PORT:-8000}"
       UVICORN_WORKERS: "4"
