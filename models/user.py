@@ -10,6 +10,7 @@ from database.engine import Base
 if TYPE_CHECKING:
     from models.station import StationModel
 
+
 class UserModel(Base):
     __tablename__ = "users"
 
