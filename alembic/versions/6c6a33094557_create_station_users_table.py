@@ -7,9 +7,8 @@ Create Date: 2026-09-03 18:19:13.840096
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import mysql
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '6c6a33094557'
@@ -28,8 +27,8 @@ def upgrade() -> None:
         sa.Column('role_id', sa.Integer(), server_default=sa.text('1'), nullable=False),
         sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
         sa.Column('updated_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
-        sa.ForeignKeyConstraint(['station_id'], ['stations.id'], ),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+        sa.ForeignKeyConstraint(['station_id'], ['stations.id'], name='fk_station_users_station_id'),
+        sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='fk_station_users_user_id'),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('station_id', 'user_id'),
         if_not_exists=True
@@ -38,4 +37,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
+    op.drop_constraint('fk_station_users_station_id', 'station_users', type_='foreignkey')
+    op.drop_constraint('fk_station_users_user_id', 'station_users', type_='foreignkey')
     op.drop_table('station_users')

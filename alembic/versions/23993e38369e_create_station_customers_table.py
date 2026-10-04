@@ -28,8 +28,8 @@ def upgrade() -> None:
         sa.Column('problem_description', sa.Text(), nullable=False),
         sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
         sa.Column('updated_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
-        sa.ForeignKeyConstraint(['station_id'], ['stations.id'], ),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+        sa.ForeignKeyConstraint(['station_id'], ['stations.id'], name='fk_station_customers_station_id'),
+        sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='fk_station_customers_user_id'),
         sa.PrimaryKeyConstraint('id'),
         if_not_exists=True
     )
@@ -38,6 +38,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
+    op.drop_constraint('fk_station_customers_station_id', 'station_customers', type_='foreignkey')
+    op.drop_constraint('fk_station_customers_user_id', 'station_customers', type_='foreignkey')
     op.drop_index('idx_station_customer_phone', table_name='station_customers', if_exists=True)
     op.drop_table('station_customers')
-

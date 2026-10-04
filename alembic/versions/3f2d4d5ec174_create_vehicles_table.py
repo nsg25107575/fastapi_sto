@@ -7,9 +7,8 @@ Create Date: 2026-09-03 18:44:07.721012
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import mysql
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '3f2d4d5ec174'
@@ -51,8 +50,8 @@ def upgrade() -> None:
         sa.Column('license_plate', sa.String(length=20), nullable=False),  # License plate number of the vehicle
         sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
         sa.Column('updated_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-        sa.ForeignKeyConstraint(['fuel_type_id'], ['fuel_types.id'], ),
+        sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='fk_vehicles_user_id'),
+        sa.ForeignKeyConstraint(['fuel_type_id'], ['fuel_types.id'], name='fk_vehicles_fuel_type_id'),
         sa.PrimaryKeyConstraint('id'),
         if_not_exists=True
     )
@@ -60,7 +59,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_table('vehicles')
+    op.drop_constraint('fk_vehicles_user_id', 'vehicles', type_='foreignkey')
+    op.drop_constraint('fk_vehicles_fuel_type_id', 'vehicles', type_='foreignkey')
     op.drop_index('idx_fuel_type_name', table_name='fuel_types', if_exists=True)
+    op.drop_table('vehicles')
     op.drop_table('fuel_types')
-

@@ -7,9 +7,8 @@ Create Date: 2026-09-03 19:14:51.800389
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import mysql
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'b5d6a8a16851'
@@ -25,7 +24,7 @@ def upgrade() -> None:
         sa.Column('user_id', sa.Integer(), nullable=False),
         sa.Column('token', sa.String(length=512), nullable=False),
         sa.Column('expires_at', sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+                    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='fk_tokens_user_id'),
         sa.PrimaryKeyConstraint('id'),
         if_not_exists=True
     )
@@ -33,4 +32,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
+    op.drop_constraint('fk_tokens_user_id', 'tokens', type_='foreignkey')
     op.drop_table('tokens')

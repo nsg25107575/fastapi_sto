@@ -7,8 +7,8 @@ Create Date: 2026-09-03 17:37:06.941468
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'a703cf38f360'
@@ -26,7 +26,7 @@ def upgrade() -> None:
         sa.Column('flow', sa.Text(), nullable=True),
         sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
         sa.Column('updated_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
-        sa.ForeignKeyConstraint(['station_id'], ['stations.id'], ),
+        sa.ForeignKeyConstraint(['station_id'], ['stations.id'], name='fk_station_work_schedule_station_id'),
         sa.PrimaryKeyConstraint('id'),
         if_not_exists=True
     )
@@ -35,4 +35,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
+    op.drop_constraint('fk_station_work_schedule_station_id', 'station_work_schedule', type_='foreignkey')
     op.drop_table('station_work_schedule')
