@@ -50,12 +50,23 @@ echo "[entrypoint] Database is reachable. Applying migrations..."
 alembic upgrade head
 
 echo "[entrypoint] Migrations applied. Starting Uvicorn on port ${APP_PORT} with ${UVICORN_WORKERS} worker(s)..."
-exec uvicorn main:app \
-    --host 0.0.0.0 \
-    --port "$APP_PORT" \
-    --workers "$UVICORN_WORKERS" \
-    --limit-concurrency "$UVICORN_LIMIT_CONCURRENCY" \
-    --backlog "$UVICORN_BACKLOG" \
-    --timeout-keep-alive "$UVICORN_KEEPALIVE" \
-    --proxy-headers \
-    --no-server-header
+if [ "$APP_ENV" = "development" ]; then
+    echo "[entrypoint] APP_ENV=development — starting Uvicorn with --reload (single worker)..."
+    exec uvicorn main:app \
+        --host 0.0.0.0 \
+        --port "$APP_PORT" \
+        --reload \
+        --proxy-headers \
+        --no-server-header
+else
+    echo "[entrypoint] APP_ENV=${APP_ENV} — starting Uvicorn on port ${APP_PORT} with ${UVICORN_WORKERS} worker(s)..."
+    exec uvicorn main:app \
+        --host 0.0.0.0 \
+        --port "$APP_PORT" \
+        --workers "$UVICORN_WORKERS" \
+        --limit-concurrency "$UVICORN_LIMIT_CONCURRENCY" \
+        --backlog "$UVICORN_BACKLOG" \
+        --timeout-keep-alive "$UVICORN_KEEPALIVE" \
+        --proxy-headers \
+        --no-server-header
+fi
