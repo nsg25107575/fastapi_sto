@@ -70,7 +70,11 @@ def test_delete_service(db_session):
     assert StationServiceModel.get_service(db_session, service.id) is None
 
 
-def test_get_services_aggregates_min_max_price(db_session):
+def test_get_services_returns_distinct_names(db_session):
+    """
+    Test that get_services returns distinct service names,
+    even if multiple price rows exist for the same service.
+    """
     station = _make_station(db_session)
     StationServiceModel.add_service(
         session=db_session, station_id=station.id, name="Brake check", price=20.0
@@ -78,9 +82,11 @@ def test_get_services_aggregates_min_max_price(db_session):
     StationServiceModel.add_service(
         session=db_session, station_id=station.id, name="Brake check", price=35.0
     )
+    StationServiceModel.add_service(
+        session=db_session, station_id=station.id, name="Oil change", price=10.0
+    )
 
-    rows = StationServiceModel.get_services(db_session)
-    row = next(r for r in rows if r["name"] == "Brake check")
+    items, total = StationServiceModel.get_services(db_session)
 
-    assert row["min_price"] == 20.0
-    assert row["max_price"] == 35.0
+    assert total == 2  # "Brake check" counted once
+    assert sorted(items) == ["Brake check", "Oil change"]

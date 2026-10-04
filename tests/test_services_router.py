@@ -35,28 +35,6 @@ def test_create_service_success(auth_client):
     assert data["price"] == 20.0
 
 
-def test_read_services_aggregates_min_max_price(auth_client):
-    client, _user = auth_client
-    station_id = _create_station(auth_client)
-
-    client.post(
-        "/services/",
-        params={"station_id": station_id, "name": "Tire change", "price": 10.0},
-    )
-    client.post(
-        "/services/",
-        params={"station_id": station_id, "name": "Tire change", "price": 15.0},
-    )
-
-    response = client.get("/services/")
-
-    assert response.status_code == 200
-    rows = response.json()
-    tire_row = next(r for r in rows if r["name"] == "Tire change")
-    assert tire_row["min_price"] == 10.0
-    assert tire_row["max_price"] == 15.0
-
-
 def test_read_service_by_id(auth_client):
     client, _user = auth_client
     station_id = _create_station(auth_client)
@@ -149,3 +127,50 @@ def test_remove_service_not_found(auth_client):
     response = client.delete("/services/999999")
 
     assert response.status_code == 404
+
+
+def test_read_services_returns_distinct_names(auth_client):
+    """
+    Test that the /services/ endpoint returns distinct service names,
+    even if multiple price rows exist for the same service.
+    """
+    client, _user = auth_client
+    station_id = _create_station(auth_client)
+
+    client.post("/services/", params={"station_id": station_id, "name": "Tire change", "price": 10.0})
+    client.post("/services/", params={"station_id": station_id, "name": "Tire change", "price": 15.0})
+    client.post("/services/", params={"station_id": station_id, "name": "Oil change", "price": 20.0})
+
+    response = client.get("/services/")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 2  # "Tire change" counted once despite two price rows
+    assert sorted(data["items"]) == ["Oil change", "Tire change"]
+
+
+def test_read_services_respects_limit(auth_client):
+    """
+    Test that the /services/ endpoint respects the 'limit' query parameter
+    and returns the correct number of items, while still providing the total count of distinct services.
+    """
+    client, _user = auth_client
+    station_id = _create_station(auth_client)
+
+    for name in ("Oil", "Tire", "Brake"):
+        client.post("/services/", params={"station_id": station_id, "name": name, "price": 10.0})
+
+    response = client.get("/services/", params={"limit": 2})
+
+    data = response.json()
+    assert len(data["items"]) == 2
+    assert data["total"] == 3
+
+
+def test_read_services_rejects_limit_above_max(client):
+    """
+    Test that the /services/ endpoint rejects requests with a 'limit' parameter above the maximum allowed value (100).
+    """
+    response = client.get("/services/", params={"limit": 101})
+
+    assert response.status_code == 422

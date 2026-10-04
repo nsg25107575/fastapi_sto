@@ -4,11 +4,13 @@ from sqlalchemy.orm import Session
 from auth.dependencies import get_current_user
 from database.engine import get_session
 from models.station_service import StationServiceModel
+from validations.pagination import PaginatedResponse, PaginationParams
 
 router = APIRouter(
     prefix="/services",
     tags=["Services"]
 )
+
 
 # FastAPI endpoints
 
@@ -29,13 +31,15 @@ def create_service(
         price=price
     )
 
-@router.get("/")
-def read_services(
-        session: Session = Depends(get_session)
-):
-    return StationServiceModel.get_services(
-        session=session
-    )
+
+@router.get("/", response_model=PaginatedResponse[str])
+def read_services(pagination: PaginationParams = Depends(), session: Session = Depends(get_session)):
+    """
+    Get a list of all unique services
+    """
+    items, total = StationServiceModel.get_services(session, pagination.offset, pagination.limit)
+
+    return PaginatedResponse(items=items, total=total, limit=pagination.limit, offset=pagination.offset)
 
 
 @router.get("/{service_id}")
