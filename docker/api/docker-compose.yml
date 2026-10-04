@@ -22,7 +22,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: "mariadb+mariadbconnector://db:${DB_PORT:-3306}/${DB_NAME}"
+      DATABASE_URL: "mariadb+mariadbconnector://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT:-3306}/${DB_NAME}"
       DB_HOST: db
       APP_PORT: "${APP_PORT:-8000}"
       # Scale workers to CPU cores available to this container; raise together

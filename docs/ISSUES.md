@@ -87,7 +87,6 @@ not a bug (different scopes/usages) but confusing to read.
 **Fix:** rename the route handler, e.g. `get_me`.
 
 ### 🟡 ISSUE-18: Inconsistent session acquisition (`get_session` vs. global `engine`)
-
 `routers/stations.py`, `routers/customer.py`, `routers/service.py` all use
 `Session = Depends(get_session)`; `routers/auth.py` instead opens
 `with Session(engine) as session:` using the module-level `engine` from

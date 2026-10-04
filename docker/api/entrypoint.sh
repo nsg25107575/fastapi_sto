@@ -26,7 +26,7 @@ pip install uv
 echo "[entrypoint] Waiting for database at ${DB_HOST}:${DB_PORT}..."
 
 attempt=0
-max_attempts=60
+max_attempts=3
 until python -c "
 import socket, sys
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
