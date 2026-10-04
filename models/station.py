@@ -10,6 +10,7 @@ from sqlalchemy.sql.sqltypes import Numeric, Integer
 
 from config import Config
 from database.engine import Base
+from database.pagination import paginate
 from models.mixin import SoftDeleteMixin
 
 if TYPE_CHECKING:
@@ -112,11 +113,12 @@ class StationModel(Base, SoftDeleteMixin):
         return session.scalars(stmt).first()
 
     @classmethod
-    def read_stations(cls, session: Session):
+    def read_stations(cls, session: Session, offset: int = 0, limit: int = 20) -> tuple[list["StationModel"], int]:
         """
-        Returns all stations from the database.
+        Returns a page of stations and the total count, using offset/limit pagination.
         """
-        return session.scalars(select(cls)).all()
+        stmt = select(cls)
+        return paginate(session, stmt, offset, limit)
 
     @classmethod
     def read_nearest_stations(

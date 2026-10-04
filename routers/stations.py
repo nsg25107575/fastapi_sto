@@ -5,10 +5,12 @@ from sqlalchemy.orm import Session
 from auth.dependencies import get_current_user
 from config import Config
 from database.engine import get_session
-from exceptions import DuplicateStationException, GeocodingFailedException, InvalidCoordinateException, StationNotFoundException
-from services.geocoding import GeocodingError, geocode_address
+from exceptions import DuplicateStationException, GeocodingFailedException, InvalidCoordinateException, \
+    StationNotFoundException
 from models.station import StationModel
 from models.user import UserModel
+from services.geocoding import GeocodingError, geocode_address
+from validations.pagination import PaginatedResponse, PaginationParams
 from validations.station import StationCreateSchema, StationUpdateSchema, StationResponseSchema, \
     NearestStationResponseSchema, NearestStationsSchema
 
@@ -49,9 +51,15 @@ def add_station(
         raise DuplicateStationException
 
 
-@router.get("/", response_model=list[StationResponseSchema], status_code=status.HTTP_200_OK)
-def get_stations(session: Session = Depends(get_session)):
-    return StationModel.read_stations(session=session)
+@router.get("/",
+            response_model=PaginatedResponse[StationResponseSchema],
+            status_code=status.HTTP_200_OK)
+def get_stations(
+        pagination: PaginationParams = Depends(),
+        session: Session = Depends(get_session)
+):
+    items, total = StationModel.read_stations(session, pagination.offset, pagination.limit)
+    return PaginatedResponse(items=items, total=total, limit=pagination.limit, offset=pagination.offset)
 
 
 @router.get("/nearest", response_model=list[NearestStationResponseSchema])

@@ -116,6 +116,10 @@ def test_update_station_without_address_change_skips_geocoding(auth_client, monk
 
 
 def test_get_stations_lists_all(auth_client):
+    """
+    GET /stations returns a paginated list of all stations, with total count and pagination metadata.
+    The default limit is 20, and offset is 0.
+    """
     client, _user = auth_client
     client.post("/stations/", json={"name": "STO A", "address": "A St"})
     client.post("/stations/", json={"name": "STO B", "address": "B St"})
@@ -124,15 +128,97 @@ def test_get_stations_lists_all(auth_client):
 
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
-    assert len(data) == 2
+    assert data["total"] == 2
+    assert len(data["items"]) == 2
+    assert data["limit"] == 20
+    assert data["offset"] == 0
 
 
 def test_get_stations_empty_list_when_none_exist(client):
+    """
+    GET /stations returns an empty list and total count of 0 when no stations exist.
+    """
     response = client.get("/stations/")
 
     assert response.status_code == 200
-    assert response.json() == []
+    data = response.json()
+    assert data["items"] == []
+    assert data["total"] == 0
+
+
+def test_get_stations_respects_limit(auth_client):
+    """
+    GET /stations supports limit and offset query parameters for pagination.
+    """
+    client, _user = auth_client
+    for letter in "ABC":
+        client.post("/stations/", json={"name": f"STO {letter}", "address": f"{letter} St"})
+
+    response = client.get("/stations/", params={"limit": 2})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["items"]) == 2
+    assert data["total"] == 3  # total reflects ALL rows, not just this page
+    assert data["limit"] == 2
+    assert data["offset"] == 0
+
+
+def test_get_stations_respects_offset(auth_client):
+    """
+    GET /stations supports offset query parameter for pagination,
+    allowing clients to retrieve subsequent pages of results.
+    """
+    client, _user = auth_client
+    for letter in "ABC":
+        client.post("/stations/", json={"name": f"STO {letter}", "address": f"{letter} St"})
+
+    first_page = client.get("/stations/", params={"limit": 2, "offset": 0}).json()
+    second_page = client.get("/stations/", params={"limit": 2, "offset": 2}).json()
+
+    assert len(first_page["items"]) == 2
+    assert len(second_page["items"]) == 1  # only 1 left (3 total, offset 2)
+    first_ids = {item["id"] for item in first_page["items"]}
+    second_ids = {item["id"] for item in second_page["items"]}
+    assert first_ids.isdisjoint(second_ids)  # no overlap between pages
+
+
+def test_get_stations_offset_beyond_total_returns_empty_items(auth_client):
+    """
+    GET /stations with an offset greater than the total number of stations returns an empty list of items,
+    but the total count remains accurate.
+    """
+    client, _user = auth_client
+    client.post("/stations/", json={"name": "STO A", "address": "A St"})
+
+    response = client.get("/stations/", params={"offset": 100})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["items"] == []
+    assert data["total"] == 1  # total count is unaffected by offset
+
+
+def test_get_stations_rejects_limit_above_max(auth_client):
+    """
+    GET /stations with a limit greater than the maximum allowed (100) returns a 422 Unprocessable Entity error.
+    """
+    client, _user = auth_client
+
+    response = client.get("/stations/", params={"limit": 101})
+
+    assert response.status_code == 422
+
+
+def test_get_stations_rejects_negative_offset(auth_client):
+    """
+    GET /stations with a negative offset returns a 422 Unprocessable Entity error.
+    """
+    client, _user = auth_client
+
+    response = client.get("/stations/", params={"offset": -1})
+
+    assert response.status_code == 422
 
 
 def test_get_station_by_id(auth_client):

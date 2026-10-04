@@ -36,6 +36,10 @@ def test_create_and_read_station(db_session):
 
 
 def test_soft_deleted_station_excluded_from_default_queries(db_session):
+    """
+    Soft-deleted stations should not be returned by read_station() or
+    read_stations() due to the global filter applied in the model's query.
+    """
     user = _make_user(db_session)
     station = StationModel.create_station(
         session=db_session,
@@ -50,7 +54,8 @@ def test_soft_deleted_station_excluded_from_default_queries(db_session):
 
     # The global soft-delete filter hides it from read_station too.
     assert StationModel.read_station(db_session, station.id) is None
-    assert station.id not in [s.id for s in StationModel.read_stations(db_session)]
+    items, _total = StationModel.read_stations(db_session)
+    assert station.id not in [s.id for s in items]
 
 
 def test_restore_station_makes_it_visible_again(db_session):
