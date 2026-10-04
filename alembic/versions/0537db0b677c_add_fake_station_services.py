@@ -7,8 +7,8 @@ Create Date: 2026-09-17 13:43:01.465706
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = "0537db0b677c"
 down_revision: Union[str, Sequence[str], None] = "82864b230ebc"
@@ -46,55 +46,55 @@ def upgrade() -> None:
 
     services_by_station = {
         "Fake STO 1": [
-            "Замена масла",
-            "Шиномонтаж",
-            "Диагностика двигателя",
+            "Oil change",
+            "Tire fitting",
+            "Engine diagnostics",
         ],
         "Fake STO 2": [
-            "Ремонт тормозов",
-            "Ремонт подвески",
-            "Развал-схождение",
+            "Brake repair",
+            "Suspension repair",
+            "Wheel alignment",
         ],
         "Fake STO 3": [
-            "Замена масла",
-            "Замена аккумулятора",
-            "Диагностика электрооборудования",
+            "Oil change",
+            "Battery replacement",
+            "Electrical diagnostics",
         ],
         "Fake STO 4": [
-            "Шиномонтаж",
-            "Развал-схождение",
-            "Ремонт подвески",
+            "Tire fitting",
+            "Wheel alignment",
+            "Suspension repair",
         ],
         "Fake STO 5": [
-            "Диагностика двигателя",
-            "Ремонт тормозов",
-            "Замена масла",
+            "Engine diagnostics",
+            "Brake repair",
+            "Oil change",
         ],
         "Fake STO 6": [
-            "Замена аккумулятора",
-            "Диагностика электрооборудования",
-            "Ремонт тормозов",
+            "Battery replacement",
+            "Electrical diagnostics",
+            "Brake repair",
         ],
         "Fake STO 7": [
-            "Ремонт подвески",
-            "Шиномонтаж",
-            "Замена масла",
+            "Suspension repair",
+            "Tire fitting",
+            "Oil change",
         ],
         "Fake STO 8": [
-            "Диагностика двигателя",
-            "Развал-схождение",
-            "Замена аккумулятора",
+            "Engine diagnostics",
+            "Wheel alignment",
+            "Battery replacement",
         ],
         "Fake STO 9": [
-            "Ремонт тормозов",
-            "Ремонт подвески",
-            "Диагностика электрооборудования",
+            "Brake repair",
+            "Suspension repair",
+            "Electrical diagnostics",
         ],
         "Fake STO 10": [
-            "Замена масла",
-            "Шиномонтаж",
-            "Диагностика двигателя",
-            "Ремонт тормозов",
+            "Oil change",
+            "Tire fitting",
+            "Engine diagnostics",
+            "Brake repair",
         ],
     }
 
@@ -126,13 +126,12 @@ def downgrade() -> None:
     op.execute(
         sa.text(
             """
-            DELETE FROM station_services
-            WHERE station_id IN (
-                SELECT id
-                FROM stations
-                WHERE name LIKE 'Fake STO %'
-                  AND address LIKE 'Fake address %'
-            )
+            DELETE
+            FROM station_services
+            WHERE station_id IN (SELECT id
+                                 FROM stations
+                                 WHERE name LIKE 'Fake STO %'
+                                   AND address LIKE 'Fake address %')
             """
         )
     )
