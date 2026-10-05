@@ -32,6 +32,10 @@
 # env_file, and its own .env lookup for ${VAR} substitution) against the
 # repo root, even though the compose file itself lives in docker/api/.
 DC := docker compose -f docker/api/docker-compose.yml --project-directory .
+# Export DC so the smoke scripts (run via bash) use the same compose command.
+# An inline `DC=... bash ...` prefix is not portable: on Windows make runs
+# recipes through cmd.exe, which does not understand that syntax.
+export DC
 
 # ───────────────────────────────────────────────────────────────────────────
 # Docker — build & run
@@ -98,10 +102,10 @@ test: test-smoke
 	$(DC) exec api python -m pytest -q
 ## Run only the smoke checks (tests/smoke/*.sh) against the live stack: DB wiring and connectivity.
 ## They are read-only (SELECT 1 / TCP connect), but unlike pytest they DO talk to the real `db` service.
-## DC is passed down so the scripts use the same compose command as the other targets.
+## DC is exported (see above) so the scripts use the same compose command as the other targets.
 test-smoke:
-	DC="$(DC)" bash tests/smoke/database_url_check.sh
-	DC="$(DC)" bash tests/smoke/db_host_port_check.sh
+	bash tests/smoke/database_url_check.sh
+	bash tests/smoke/db_host_port_check.sh
 ## Run the full test suite inside the api container with verbose per-test output
 test-verbose:
 	$(DC) exec api python -m pytest -v
