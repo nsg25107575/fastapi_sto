@@ -42,7 +42,7 @@ async def block_schema_endpoints_outside_dev(request: Request, call_next):
     set_current_locale(get_locale(request))
 
     if request.url.path == "/openapi.json" and Config.app_env != "development":
-        return JSONResponse(status_code=404, content={"detail": t("not_found")})
+        return JSONResponse(status_code=404, content={"detail": t("app.not_found")})
 
     return await call_next(request)
 

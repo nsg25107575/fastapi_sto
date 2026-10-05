@@ -9,10 +9,10 @@ from starlette.status import (
 from i18n.dependency_translator import t
 
 
-def application_not_found_exception(locale: str | None = None) -> HTTPException:
+def app_not_found_exception(locale: str | None = None) -> HTTPException:
     return HTTPException(
         status_code=HTTP_404_NOT_FOUND,
-        detail=t("application.not_found", locale=locale),
+        detail=t("app.not_found", locale=locale),
         headers={"WWW-Authenticate": "Bearer"},
     )
 
