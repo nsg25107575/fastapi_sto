@@ -120,18 +120,16 @@ migrate-up-index:
 	$(DC) exec api python -m alembic upgrade $(index)
 ## Downgrade migration by index
 ## Usage:
+## Autogenerate a new migration revision (usage: make migrate msg="describe the schema change")
+migrate:
+	$(DC) exec api python -m alembic revision --autogenerate -m "$(msg)"
 ##   make migrate downgrade index="1" — downgrade migration ${index}
 migrate-down-index:
 	$(DC) exec api python -m alembic downgrade $(index)
 ## Upgrade all migration
 migrate-up:
 	$(DC) exec api python -m alembic upgrade head
-## Shortcut: apply all pending migrations (alias for migrate-up)
-migrate: migrate-up
-
 ## Downgrade all migration
 migrate-down:
 	$(DC) exec api python -m alembic downgrade base
-## Autogenerate a new migration revision (usage: make migrate-revision msg="describe the schema change")
-migrate-revision:
-	$(DC) exec api python -m alembic revision --autogenerate -m "$(msg)"
+
