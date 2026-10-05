@@ -6,7 +6,7 @@
 
 .PHONY: \
   migrate migrate-up-index migrate-down-index migrate-up migrate-down \
-  migrate-revision build up up-build down restart logs ps \
+  build up up-build down restart logs ps \
   _ensure_uv deps-update deps-update-package deps-outdated \
   test test-verbose test-cov test-cov-html test-file
 
@@ -113,17 +113,13 @@ test-file:
 # ───────────────────────────────────────────────────────────────────────────
 # Alembic — migration, run INSIDE the api container
 # ───────────────────────────────────────────────────────────────────────────
-## Upgrade migration by index
-## Usage:
-##   make migrate upgrade index="1" — upgrade migration ${index}
-migrate-up-index:
-	$(DC) exec api python -m alembic upgrade $(index)
-## Downgrade migration by index
-## Usage:
 ## Autogenerate a new migration revision (usage: make migrate msg="describe the schema change")
 migrate:
 	$(DC) exec api python -m alembic revision --autogenerate -m "$(msg)"
-##   make migrate downgrade index="1" — downgrade migration ${index}
+## Upgrade migration by index (usage: make migrate upgrade index="1")
+migrate-up-index:
+	$(DC) exec api python -m alembic upgrade $(index)
+## Downgrade migration by index (usage: make migrate downgrade index="1")
 migrate-down-index:
 	$(DC) exec api python -m alembic downgrade $(index)
 ## Upgrade all migration
