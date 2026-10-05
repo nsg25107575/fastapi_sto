@@ -37,7 +37,8 @@ up-build`):
 ```bash
 make up-build        # build & start the stack, if not already running
 
-make test            # run the full suite inside the api container
+make test            # smoke checks first (make test-smoke), then the full pytest suite
+make test-smoke      # only the smoke checks (DB wiring/connectivity, see below)
 make test-verbose    # same, with per-test output
 make test-cov        # run with coverage summary, fails if < 80%
 make test-cov-html   # generate an HTML coverage report (inside the container)
@@ -45,7 +46,7 @@ make test-file file="tests/test_stations.py"              # single file
 make test-file file="tests/test_stations.py::test_create_station_success"  # single test
 ```
 
-Each target runs `docker compose exec api python -m pytest ...` under
+Each pytest target runs `docker compose exec api python -m pytest ...` under
 the hood (see the `Makefile`). Equivalent raw command (if not using
 `make`):
 
@@ -53,9 +54,35 @@ the hood (see the `Makefile`). Equivalent raw command (if not using
 docker compose -f docker/api/docker-compose.yml --project-directory . exec api python -m pytest -q
 ```
 
+`make test` runs the smoke checks **before** pytest and stops on the first
+failure, so a mis-wired stack is reported immediately instead of as a wall
+of unrelated test errors. Only `make test` includes them; the other `test-*`
+targets run pytest alone.
+
+### Smoke Checks (`tests/smoke/`)
+
+Shell scripts that verify the **running stack** is wired correctly. Unlike
+pytest (isolated in-memory SQLite), they talk to the real `db` service, but
+are read-only (`SELECT 1` and a TCP connect) and never print credentials.
+
+| Script                              | Verifies                                                                                                                                               |
+|-------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `tests/smoke/database_url_check.sh` | `DATABASE_URL` has the `user:password@host:port/db` shape and the app can authenticate and run `SELECT 1`                                              |
+| `tests/smoke/db_host_port_check.sh` | `DATABASE_URL` host/port match `DB_HOST`/`DB_PORT` (what `entrypoint.sh` waits on), and `DB_HOST:DB_PORT` is reachable from inside the `api` container |
+
+The second script guards against mixing up `DB_PORT` (port inside the Docker
+network, `3306`) with `DB_HOST_PORT` (port published on the host), and
+against a hardcoded `DB_HOST` in a compose file diverging from
+`DATABASE_URL`. Run them on their own with `make test-smoke`. Both scripts
+are executed via `bash`, so the executable bit is not required.
+
+`db_host_port_check.sh` accepts a `DC` variable to target another compose
+stack (e.g. the CI one); `database_url_check.sh` is currently fixed to
+`docker/api/docker-compose.yml`.
+
 The `api` container itself still needs a valid `.env` and the `db`
 service running to start up normally (see [INSTALL.md](INSTALL.md)) —
-but once it's up, the test suite never touches that real database:
+but once it's up, the pytest suite never touches that real database:
 `tests/conftest.py` forces `DATABASE_URL=sqlite:///:memory:` (and dummy
 JWT/cookie secrets) before anything else is imported.
 

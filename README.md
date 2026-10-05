@@ -42,8 +42,10 @@ kws_station_api/
 ├── docker/
 │   └── api/            # API container stack (extend with docker/<service>/ as needed)
 │       ├── Dockerfile
-│       ├── docker-compose.yml   # API + MariaDB stack
-│       └── entrypoint.sh        # Waits for DB, runs migrations, starts Uvicorn
+│       ├── docker-compose.yml       # API + MariaDB stack (local development)
+│       ├── docker-compose.prod.yml  # Production override (joins kws_default network)
+│       ├── docker-compose.ci.yml    # Standalone CI stack (separate names/ports)
+│       └── entrypoint.sh            # Waits for DB, runs migrations, starts Uvicorn
 ├── docs/               # Architecture, database, auth, API, testing, issues docs
 ├── renovate.json        # Automated dependency update bot config
 └── Makefile             # Common dev/ops commands
@@ -67,6 +69,11 @@ make migrate-up        # apply database migrations
 Database migrations are applied **automatically** on container startup (see
 `docker/api/entrypoint.sh`) — no separate `make migrate-up` step is needed
 when running via Docker.
+
+> **Database ports:** keep `DB_PORT=3306` (the port MariaDB listens on
+> *inside* the Docker network, used by the API). To change the port exposed
+> on your machine, set `DB_HOST_PORT` (default `3310`) instead. See
+> [docs/INSTALL.md](docs/INSTALL.md#2-configure-environment-variables).
 
 The API will be available at `http://localhost:${APP_PORT}` (default `8000`,
 unless overridden in `.env`).

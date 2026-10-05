@@ -25,27 +25,35 @@ Copy the example file and fill in real values:
 cp .env.example .env
 ```
 
-| Variable                    | Description                                                 | Example                       |
-|-----------------------------|-------------------------------------------------------------|-------------------------------|
-| `APP_NAME`                  | Application/service name                                    | `station-api`                 |
-| `APP_PORT`                  | Port the API listens on (host & container)                  | `8000`                        |
-| `APP_ENV`                   | Environment name (`development`/`production`)               | `development`                 |
-| `APP_TIMEZONE`              | Timezone used for timestamps                                | `Europe/Kyiv`                 |
-| `APP_NEAREST_STATION_LIMIT` | Default limit for "nearest stations" search                 | `10`                          |
-| `GEOCODING_BASE_URL`        | Address-to-coordinates provider endpoint (used by `POST /stations`) | `https://nominatim.openstreetmap.org/search` |
-| `GEOCODING_USER_AGENT`      | User-Agent sent to the geocoding provider (required by Nominatim's usage policy) | `kws-station-api/1.0` |
-| `GEOCODING_TIMEOUT`         | Geocoding HTTP request timeout, in seconds                  | `5`                            |
-| `DB_HOST`                   | Database host (use `db` for Docker, `localhost` for native) | `db`                          |
-| `DB_PORT`                   | Database port exposed on the host                           | `3306`                        |
-| `DB_NAME`                   | Database name                                               | `station_db`                  |
-| `DB_USER`                   | Database user                                               | `station_user`                |
-| `DB_PASSWORD`               | Database user password                                      | *(secret)*                    |
-| `DB_ROOT_PASSWORD`          | MariaDB root password (Docker only)                         | *(secret)*                    |
-| `JWT_SECRET_KEY`            | Secret used to sign JWT tokens                              | *(secret, generate your own)* |
-| `JWT_EXPIRES_IN`            | JWT expiration, in seconds                                  | `3600`                        |
-| `COOKIES_SECRET_KEY`        | Secret used to sign cookies                                 | *(secret)*                    |
-| `COOKIES_SECURE`            | Send cookies only over HTTPS                                | `False` (dev) / `True` (prod) |
-| `MAX_COOKIE_AGE_IN_DAYS`    | Cookie lifetime, in days                                    | `7`                           |
+| Variable                    | Description                                                                                                                          | Example                                      |
+|-----------------------------|--------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------|
+| `APP_NAME`                  | Application/service name                                                                                                             | `station-api`                                |
+| `APP_PORT`                  | Port the API listens on (host & container)                                                                                           | `8000`                                       |
+| `APP_ENV`                   | Environment name (`development`/`production`)                                                                                        | `development`                                |
+| `APP_TIMEZONE`              | Timezone used for timestamps                                                                                                         | `Europe/Kyiv`                                |
+| `APP_NEAREST_STATION_LIMIT` | Default limit for "nearest stations" search                                                                                          | `10`                                         |
+| `GEOCODING_BASE_URL`        | Address-to-coordinates provider endpoint (used by `POST /stations`)                                                                  | `https://nominatim.openstreetmap.org/search` |
+| `GEOCODING_USER_AGENT`      | User-Agent sent to the geocoding provider (required by Nominatim's usage policy)                                                     | `kws-station-api/1.0`                        |
+| `GEOCODING_TIMEOUT`         | Geocoding HTTP request timeout, in seconds                                                                                           | `5`                                          |
+| `DB_HOST`                   | Database host (the DB container name `kws_station_db` for Docker, `localhost` for native). Also used as the DB `container_name`      | `kws_station_db`                             |
+| `DB_PORT`                   | Port MariaDB listens on **inside** the Docker network (used by the API and `entrypoint.sh`). Keep `3306` for Docker                  | `3306`                                       |
+| `DB_HOST_PORT`              | Port published on the **host** for the DB container (only for access from the host, e.g. a DB client). Not used by the API container | `3310`                                       |
+| `DB_NAME`                   | Database name                                                                                                                        | `station_db`                                 |
+| `DB_USER`                   | Database user                                                                                                                        | `station_user`                               |
+| `DB_PASSWORD`               | Database user password                                                                                                               | *(secret)*                                   |
+| `DB_ROOT_PASSWORD`          | MariaDB root password (Docker only)                                                                                                  | *(secret)*                                   |
+| `JWT_SECRET_KEY`            | Secret used to sign JWT tokens                                                                                                       | *(secret, generate your own)*                |
+| `JWT_EXPIRES_IN`            | JWT expiration, in seconds                                                                                                           | `3600`                                       |
+| `COOKIES_SECRET_KEY`        | Secret used to sign cookies                                                                                                          | *(secret)*                                   |
+| `COOKIES_SECURE`            | Send cookies only over HTTPS                                                                                                         | `False` (dev) / `True` (prod)                |
+| `MAX_COOKIE_AGE_IN_DAYS`    | Cookie lifetime, in days                                                                                                             | `7`                                          |
+
+> **Database ports — don't mix them up.** `DB_PORT` is the port *inside*
+> the Docker network (always `3306` for the MariaDB image), while
+> `DB_HOST_PORT` is only the host-side port in the `ports:` mapping
+> (`DB_HOST_PORT:3306`). Setting `DB_PORT=3310` makes the API wait for
+> `kws_station_db:3310`, where nothing listens, and the container exits
+> with `Database did not become reachable in time`.
 
 > **Security note:** never commit a real `.env` file. Generate strong,
 > unique values for `JWT_SECRET_KEY`, `COOKIES_SECRET_KEY`, `DB_PASSWORD`,
@@ -62,7 +70,7 @@ The application resolves the database connection in this order (see `../config/c
 Build the images and start the stack (API + MariaDB) in the background:
 
 ```bash
-make docker-up-build
+make up-build
 ```
 
 Equivalent raw command:
@@ -90,8 +98,8 @@ make migrate-up
 Check that everything is running:
 
 ```bash
-make docker-ps
-make docker-logs
+make ps
+make logs
 ```
 
 The API is now available at `http://localhost:${APP_PORT}` (e.g.
@@ -100,7 +108,7 @@ The API is now available at `http://localhost:${APP_PORT}` (e.g.
 To stop the stack:
 
 ```bash
-make docker-down
+make down
 ```
 
 ### Docker Stack Details
@@ -113,18 +121,40 @@ project root, so the stack can be extended later with additional services
   (`python:3.14-slim`), runs Uvicorn with multiple workers tuned for
   concurrent load (`UVICORN_WORKERS`, `UVICORN_LIMIT_CONCURRENCY`, etc. —
   configurable via environment variables).
-- **`docker/api/entrypoint.sh`** — container entrypoint: waits for the `db`
-  service to accept TCP connections, runs `alembic upgrade head`, then execs
-  Uvicorn. Safe to re-run on every container start/restart.
+- **`docker/api/entrypoint.sh`** — container entrypoint: waits until
+  `${DB_HOST}:${DB_PORT}` accepts TCP connections, runs `alembic upgrade head`,
+  then execs Uvicorn. Safe to re-run on every container start/restart.
 - **`docker/api/docker-compose.yml`** — the actual stack definition (`api` +
   `db`). Build context is the project root (`../..`), so `COPY` paths inside
   the Dockerfile are relative to the repo root, not `docker/api/`.
 - **`db` service** — `mariadb:latest`, tuned for higher concurrency
   (`max_connections`, InnoDB buffer pool size, I/O threads), with a
   persistent named volume (`kws_station_db_data`) and a healthcheck that
-  the `api` service waits on before starting.
+  the `api` service waits on before starting. The container is named after
+  `DB_HOST` (default `kws_station_db`), and the API reaches it by that name.
+  MariaDB always listens on `3306` inside the container; `DB_HOST_PORT`
+  (default `3310`) is only the port published on the host.
 - Both services have CPU/memory limits and log rotation configured in
   `docker/api/docker-compose.yml` — adjust them to match your host's resources.
+
+### Other Compose Files
+
+| File                                 | Purpose                                                                                                                                                                                                                                         | Ports / names                                                                                         |
+|--------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| `docker/api/docker-compose.yml`      | Base stack for local development (bind-mounts the repo for hot reload). Used by all `make` targets                                                                                                                                              | API `APP_PORT`, DB host port `DB_HOST_PORT` (`3310`), containers `kws_station_api` / `kws_station_db` |
+| `docker/api/docker-compose.prod.yml` | Production **override**, applied on top of the base file. Joins the external `kws_default` network so Nginx Proxy Manager can reach the API by name, and pins `DB_HOST` to the unique container name instead of the ambiguous service name `db` | Same as the base file                                                                                 |
+| `docker/api/docker-compose.ci.yml`   | Standalone CI stack (Gitea Actions): no bind mount, own project name (`-p kws_station_api_ci`), network and volume, so it can't tear down production                                                                                            | API `8001`, DB host port `3307`, containers `kws_station_api_ci` / `kws_station_db_ci`                |
+
+Production deployment:
+
+```bash
+docker compose -f docker/api/docker-compose.yml -f docker/api/docker-compose.prod.yml --project-directory . up -d --build
+```
+
+The `kws_default` network must already exist on the host (it is created by
+the main `kws` stack). To preview the resolved configuration (ports, hosts,
+`DATABASE_URL`) without starting anything, run the same command with
+`config` instead of `up -d --build`.
 
 ## 4. Run Natively (without Docker)
 
@@ -197,7 +227,7 @@ make deps-update-package package="fastapi"
 make deps-outdated
 ```
 
-After regenerating, rebuild the image (`make docker-up-build`) so the
+After regenerating, rebuild the image (`make up-build`) so the
 container picks up the updated `requirements.txt`.
 
 A [`renovate.json`](../renovate.json) config is included at the repo root
@@ -219,9 +249,11 @@ configured.
 
 ## Troubleshooting
 
-| Symptom                                        | Likely Cause                            | Fix                                                                                     |
-|------------------------------------------------|-----------------------------------------|-----------------------------------------------------------------------------------------|
-| `api` container exits immediately              | Missing/incorrect `.env` values         | Check `make docker-logs` and verify `.env` against `.env.example`                       |
-| `pip install` fails building `mariadb` package | Missing MariaDB Connector/C dev headers | Install `libmariadb-dev` (or platform equivalent) before `pip install`                  |
-| API can't reach the database                   | Wrong `DB_HOST` for your setup          | Use `DB_HOST=db` for Docker, `DB_HOST=localhost` (or your DB host) for native runs      |
-| `alembic upgrade head` fails to connect        | Database not ready yet                  | Wait for the `db` container healthcheck to pass, or start the DB first in native setups |
+| Symptom                                                                | Likely Cause                                                                                           | Fix                                                                                                                  |
+|------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| `api` container exits immediately                                      | Missing/incorrect `.env` values                                                                        | Check `make logs` and verify `.env` against `.env.example`                                                           |
+| `pip install` fails building `mariadb` package                         | Missing MariaDB Connector/C dev headers                                                                | Install `libmariadb-dev` (or platform equivalent) before `pip install`                                               |
+| API can't reach the database                                           | Wrong `DB_HOST` for your setup                                                                         | Use `DB_HOST=kws_station_db` for Docker, `DB_HOST=localhost` (or your DB host) for native runs                       |
+| `Database did not become reachable in time` after changing the DB port | `DB_PORT` was set to the host port (e.g. `3310`); MariaDB still listens on `3306` inside the container | Keep `DB_PORT=3306` and set the host-side port with `DB_HOST_PORT`; then recreate the stack (`make down && make up`) |
+| Changed `DB_HOST` in `.env` but the container still uses the old host  | A hardcoded `DB_HOST` in the `environment:` block overrides `env_file`                                 | Use `DB_HOST: ${DB_HOST:-kws_station_db}` in compose files, not a literal value                                      |
+| `alembic upgrade head` fails to connect                                | Database not ready yet                                                                                 | Wait for the `db` container healthcheck to pass, or start the DB first in native setups                              |
