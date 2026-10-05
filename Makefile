@@ -5,7 +5,7 @@
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 .PHONY: \
-  migrate-up-index migrate-down-index migrate-up migrate-down \
+  migrate migrate-up-index migrate-down-index migrate-up migrate-down \
   migrate-revision build up up-build down restart logs ps \
   _ensure_uv deps-update deps-update-package deps-outdated \
   test test-verbose test-cov test-cov-html test-file
@@ -126,6 +126,9 @@ migrate-down-index:
 ## Upgrade all migration
 migrate-up:
 	$(DC) exec api python -m alembic upgrade head
+## Shortcut: apply all pending migrations (alias for migrate-up)
+migrate: migrate-up
+
 ## Downgrade all migration
 migrate-down:
 	$(DC) exec api python -m alembic downgrade base
