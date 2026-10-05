@@ -116,10 +116,10 @@ test-file:
 ## Autogenerate a new migration revision (usage: make migrate msg="describe the schema change")
 migrate:
 	$(DC) exec api python -m alembic revision --autogenerate -m "$(msg)"
-## Upgrade migration by index (usage: make migrate upgrade index="1")
+## Upgrade migration by index (usage: make migrate-up-index index="1")
 migrate-up-index:
 	$(DC) exec api python -m alembic upgrade $(index)
-## Downgrade migration by index (usage: make migrate downgrade index="1")
+## Downgrade migration by index (usage: make migrate-down-index index="-1")
 migrate-down-index:
 	$(DC) exec api python -m alembic downgrade $(index)
 ## Upgrade all migration
