@@ -60,16 +60,47 @@ jobs:
       # 300s budget: pip/uv install + wait-for-db loop + ~15 Alembic
       # migrations + 4 Uvicorn workers starting + healthcheck
       # start_period (15s) can together exceed 120s on a cold run.
+      #
+      # Fails fast if the container has already exited (restart: "no" in
+      # the CI compose file), instead of polling for the full 300s on a
+      # container that will never become healthy.
       - name: Wait for api container to become healthy
         run: |
           timeout 300 sh -c '
             until [ "$(docker inspect -f "{{.State.Health.Status}}" kws_station_api_ci 2>/dev/null)" = "healthy" ]; do
+              if [ "$(docker inspect -f "{{.State.Status}}" kws_station_api_ci 2>/dev/null)" = "exited" ]; then
+                echo "api container exited before becoming healthy"
+                exit 1
+              fi
               sleep 2
             done
           '
 
       - name: Run test suite
         run: docker compose -p kws_station_api_ci -f docker/api/docker-compose.ci.yml --project-directory . exec -T api python -m pytest -q
+
+      # Diagnostics: runs only when an earlier step failed, and MUST stay
+      # before "Tear down stack" -- that step runs `down -v`, which removes
+      # the containers and their logs, leaving nothing to inspect afterwards.
+      # Prints container state, health-check history and recent logs of both
+      # services. Does not print the resolved compose config, because it
+      # would contain secrets (DB passwords).
+      - name: Show diagnostics on failure
+        if: failure()
+        run: |
+          DC="docker compose -p kws_station_api_ci -f docker/api/docker-compose.ci.yml --project-directory ."
+          echo "::group::Containers"
+          $DC ps -a || true
+          echo "::endgroup::"
+          echo "::group::api health check history"
+          docker inspect -f '{{json .State.Health}}' kws_station_api_ci || true
+          echo "::endgroup::"
+          echo "::group::api logs (last 150 lines)"
+          $DC logs --no-color --tail=150 api || true
+          echo "::endgroup::"
+          echo "::group::db logs (last 50 lines)"
+          $DC logs --no-color --tail=50 db || true
+          echo "::endgroup::"
 
       - name: Tear down stack
         if: always()
