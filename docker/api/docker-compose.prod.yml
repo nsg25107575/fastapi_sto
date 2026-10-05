@@ -1,6 +1,6 @@
 # Production override — joins the kws stack's own Docker network so
 # Nginx Proxy Manager (running as part of ~/kws/docker-compose.yml) can
-# reach this container directly by name (http://kws_station_api:8000)
+# reach this container directly by name (http://kws_station_api:8333)
 # instead of a host bridge IP, which NPM (itself a container) cannot
 # resolve. Without this, requests to the public domain return a
 # 502 Bad Gateway.
@@ -10,7 +10,7 @@
 # and works on any machine (local dev, CI). Apply this override only
 # when deploying to the server where the kws stack already exists:
 #
-#   docker compose -f docker/api/docker-compose.yml -f docker/api/docker-compose.prod.yml --project-directory . up -d --build
+# `docker compose -f docker/api/docker-compose.yml -f docker/api/docker-compose.prod.yml --project-directory . up -d --build`
 #
 # Requires: the `kws_default` network must already exist on the host
 # (created automatically by ~/kws/docker-compose.yml — the kws stack
@@ -27,19 +27,20 @@
 # (kws_station_db), which stays globally unique across every network
 # this host runs — unlike the generic service name "db".
 #
-# IMPORTANT — credentials in DATABASE_URL: the base docker-compose.yml
-# builds this URL as "mariadb+mariadbconnector://db:PORT/NAME" with no
-# user/password — relying on the driver's own default (root, no
-# password), which only works for local dev where MariaDB has lax
-# auth. The override below adds explicit "${DB_USER}:${DB_PASSWORD}@"
-# because production MariaDB requires real credentials; omitting them
-# caused "Access denied for user ''root''@''...''" on this host.
+# IMPORTANT — DATABASE_URL: the base docker-compose.yml now builds this
+# URL with explicit "${DB_USER}:${DB_PASSWORD}@" credentials and takes
+# the host and port from .env (DB_HOST / DB_PORT). The override below
+# repeats it on purpose, so production stays explicit: the host is
+# pinned to the unique container_name (see above) and the port to 3306,
+# which is the port MariaDB listens on INSIDE the container. Do not use
+# DB_HOST_PORT here: it is only the host-side published port of the
+# base file's "ports:" mapping and is unreachable from other containers.
 services:
   api:
     environment:
       APP_ENV: "production"
-      DATABASE_URL: "mariadb+mariadbconnector://${DB_USER}:${DB_PASSWORD}@kws_station_db:${DB_PORT:-3306}/${DB_NAME}"
-      DB_HOST: kws_station_db
+      DATABASE_URL: "mariadb+mariadbconnector://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-kws_station_db}:${DB_PORT:-3306}/${DB_NAME:-kws_station}"
+      DB_HOST: ${DB_HOST:-kws_station_db}
     networks:
       - kws_station_net
       - kws_default
