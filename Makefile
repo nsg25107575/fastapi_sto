@@ -75,12 +75,14 @@ ps:
 _ensure_uv:
 	@$(DC) exec api python -m uv --version >/dev/null 2>&1 || $(DC) exec api python -m pip install -q uv
 
-## Recompile requirements.txt with the latest versions allowed by pyproject.toml
+## Recompile requirements.txt with the latest versions allowed by pyproject.toml, then install it into the running api container
 deps-update: _ensure_uv
 	$(DC) exec api python -m uv pip compile --upgrade pyproject.toml --output-file requirements.txt
-## Upgrade a single package only (usage: make deps-update-package package="fastapi")
+	$(DC) exec api python -m uv pip install --system -r requirements.txt
+## Upgrade a single package only, then install the updated requirements.txt (usage: make deps-update-package package="fastapi")
 deps-update-package: _ensure_uv
 	$(DC) exec api python -m uv pip compile --upgrade-package $(package) pyproject.toml --output-file requirements.txt
+	$(DC) exec api python -m uv pip install --system -r requirements.txt
 ## List installed packages that have newer versions available
 deps-outdated:
 	$(DC) exec api python -m pip list --outdated

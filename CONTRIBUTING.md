@@ -28,7 +28,7 @@ expected workflow and code standards for this project.
    (also run inside the `api` container — see [docs/DATABASE.md](docs/DATABASE.md))
    ```bash
    # Create a new revision
-   make migrate-revision msg="describe your change"
+   make migrate msg="describe your change"
    # Apply it
    make migrate-up
    ```
@@ -82,7 +82,8 @@ when testing changes via Docker.
   ```
 - Prefer regenerating `requirements.txt` via `make deps-update` (or
   `make deps-update-package package="x"` for a single package) rather than
-  hand-editing it — see [docs/INSTALL.md](docs/INSTALL.md#5-keeping-dependencies-up-to-date).
+  hand-editing it. Both targets also install the result into the running
+  `api` container afterwards — see [docs/INSTALL.md](docs/INSTALL.md#6-keeping-dependencies-up-to-date).
 - If you add a new required environment variable that the container needs,
   update `docker/api/docker-compose.yml`, `.env.example`, and
   [docs/INSTALL.md](docs/INSTALL.md) together.

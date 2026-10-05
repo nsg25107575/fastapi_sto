@@ -63,7 +63,6 @@ See [docs/INSTALL.md](docs/INSTALL.md) for the full installation guide.
 ```bash
 cp .env.example .env   # fill in real secrets
 make up-build          # build images and start the stack
-make migrate-up        # apply database migrations
 ```
 
 Database migrations are applied **automatically** on container startup (see
@@ -106,10 +105,14 @@ dependency (not declared by hand). To refresh it:
 first):
 
 ```bash
-make deps-update                        # upgrade everything within pyproject.toml constraints
-make deps-update-package package="fastapi"   # upgrade a single package
+make deps-update                        # recompile requirements.txt (all packages), then install it in the container
+make deps-update-package package="fastapi"   # same, but upgrade a single package
 make deps-outdated                       # list packages with newer versions available
 ```
+
+Both `deps-update*` targets run `uv pip compile` first and, only if it
+succeeds, `uv pip install --system -r requirements.txt` in the running
+container. Rebuild the image (`make up-build`) to make the change permanent.
 
 After running `make deps-update`, always run `make test-cov` before
 committing — if a minor/patch bump breaks something, pin that one
@@ -126,13 +129,17 @@ is configured against this repository.
 ```bash
 make up-build    # build & start the stack first, if not already running
 
-make test        # run the full suite inside the api container
-make test-cov     # same, with coverage summary (fails if < 80%)
+make test        # smoke checks first, then the full pytest suite inside the api container
+make test-smoke  # only the smoke checks (DB wiring/connectivity, needs bash)
+make test-cov    # pytest with coverage summary (fails if < 80%)
 ```
 
-Tests always run inside the `api` container (against an isolated
-in-memory SQLite, not the real `db`) — there is no local/host-based test
-target. See [docs/TESTING.md](docs/TESTING.md) for why.
+The pytest suite always runs inside the `api` container (against an
+isolated in-memory SQLite, not the real `db`) — there is no local/host-based
+test target. The smoke checks (`tests/smoke/`) are the exception: they run
+through `bash` on the host, call `docker compose exec`, and talk to the real
+`db` (read-only). `make test` stops before pytest if a smoke check fails.
+See [docs/TESTING.md](docs/TESTING.md) for details.
 
 See [docs/TESTING.md](docs/TESTING.md) for the full breakdown of what's
 covered and how fixtures work.
@@ -145,25 +152,27 @@ building the test suite.
 
 ## Available Make Commands
 
-| Command                                | Description                                        |
-|----------------------------------------|----------------------------------------------------|
-| `make docker-build`                    | Build (or rebuild) the API image                   |
-| `make docker-up`                       | Start all services in the background               |
-| `make docker-up-build`                 | Rebuild the API image and start all services       |
-| `make docker-down`                     | Stop and remove all services                       |
-| `make docker-restart`                  | Restart all services without rebuilding            |
-| `make docker-logs`                     | Tail logs from all services                        |
-| `make docker-ps`                       | Show status of the stack's containers              |
-| `make migrate-up`                      | Apply all pending migrations                       |
-| `make deps-update`                     | Recompile `requirements.txt` from `pyproject.toml` |
-| `make deps-update-package package="x"` | Upgrade a single package only                      |
-| `make deps-outdated`                   | List installed packages with newer versions        |
-| `make migrate-down`                    | Revert all migrations                              |
-| `make migrate-up-index index="1"`      | Apply a specific migration                         |
-| `make migrate-down-index index="1"`    | Revert a specific migration                        |
+| Command                                | Description                                                                          |
+|----------------------------------------|--------------------------------------------------------------------------------------|
+| `make build`                           | Build (or rebuild) the API image                                                     |
+| `make up`                              | Start all services in the background                                                 |
+| `make up-build`                        | Rebuild the API image and start all services                                         |
+| `make down`                            | Stop and remove all services                                                         |
+| `make restart`                         | Restart all services without rebuilding                                              |
+| `make logs`                            | Tail logs from all services                                                          |
+| `make ps`                              | Show status of the stack's containers                                                |
+| `make migrate msg="..."`               | Autogenerate a new migration revision                                                |
+| `make migrate-up`                      | Apply all pending migrations                                                         |
+| `make deps-update`                     | Recompile `requirements.txt` from `pyproject.toml`, then install it in the container |
+| `make deps-update-package package="x"` | Upgrade a single package only, then install `requirements.txt` in the container      |
+| `make deps-outdated`                   | List installed packages with newer versions                                          |
+| `make migrate-down`                    | Revert all migrations                                                                |
+| `make migrate-up-index index="1"`      | Apply a specific migration                                                           |
+| `make migrate-down-index index="1"`    | Revert a specific migration                                                          |
 
-For testing commands (`make test`, `make test-cov`, `make test-cov-html`,
-`make test-file`), see [docs/TESTING.md](docs/TESTING.md).
+For testing commands (`make test`, `make test-smoke`, `make test-verbose`,
+`make test-cov`, `make test-cov-html`, `make test-file`), see
+[docs/TESTING.md](docs/TESTING.md).
 
 ## Configuration
 

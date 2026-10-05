@@ -204,9 +204,9 @@ tooling, not something the application imports or runs with at runtime:
   ```bash
   pip install uv
   ```
-  The `make deps-update*` targets also auto-install `uv` into the active
-  venv on first use if it isn't already present, so this manual step is
-  optional.
+  The `make deps-update*` targets run inside the `api` container and
+  auto-install `uv` there on first use if it isn't already present, so this
+  manual step is only needed for the native (non-Docker) setup.
 
 ## 6. Keeping Dependencies Up to Date
 
@@ -227,8 +227,17 @@ make deps-update-package package="fastapi"
 make deps-outdated
 ```
 
-After regenerating, rebuild the image (`make up-build`) so the
-container picks up the updated `requirements.txt`.
+Both `make deps-update` and `make deps-update-package` run two steps inside
+the running `api` container:
+
+1. `uv pip compile` regenerates `requirements.txt`.
+2. `uv pip install --system -r requirements.txt` installs the result into
+   the container — only if step 1 succeeded, so a failed resolve never
+   touches the installed packages.
+
+The installed packages live in the container only until it is recreated.
+To bake the updated `requirements.txt` into the image (and for CI/prod),
+rebuild it with `make up-build`. The container must be running first (`make up` / `make up-build`).
 
 A [`renovate.json`](../renovate.json) config is included at the repo root
 for teams that run a self-hosted [Renovate](https://docs.renovatebot.com/)
