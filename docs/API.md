@@ -44,15 +44,15 @@ other fields (e.g. `active`) leaves existing coordinates untouched.
 
 Notes:
 - `POST`/`PUT` return `409 Conflict` if the `(name, address)` pair already
-  exists (`DuplicateStationException`).
-- `POST`/`PUT` return `400 Bad Request` (`GeocodingFailedException`) if
+  exists (`duplicate_station_exception`).
+- `POST`/`PUT` return `400 Bad Request` (`geocoding_failed_exception`) if
   the address cannot be resolved to coordinates (no results from the
   provider, provider error, or network/timeout failure).
 - `GET /stations/{id}` and `PUT`/`DELETE` return `404 Not Found`
-  (`StationNotFoundException`) if the station doesn't exist (or is
+  (`station_not_found_exception`) if the station doesn't exist (or is
   soft-deleted).
 - `GET /stations/nearest` validates `lat in [-90, 90]`, `lng in [-180, 180]`,
-  returning `400 Bad Request` (`InvalidCoordinateException`) otherwise. The
+  returning `400 Bad Request` (`invalid_coordinate_exception`) otherwise. The
   result includes each station's `services` sorted by price.
 - **Ownership is not currently enforced** on `PUT`/`DELETE` -- any
   authenticated user can modify or delete *any* station, not just their
@@ -118,10 +118,10 @@ Completes the "find nearest station -> order a service" flow:
 Notes:
 - `POST /orders/` is intentionally **anonymous** (no auth), mirroring
   `/customer` -- placing an order does not require an account.
-- Returns `400 Bad Request` (`InvalidOrderServiceException`) if
+- Returns `400 Bad Request` (`invalid_order_service_exception`) if
   `customer_id` does not exist, or if `station_service_id` does not
   belong to `station_id`.
-- Returns `404 Not Found` (`OrderNotFoundException`) if the order
+- Returns `404 Not Found` (`order_not_found_exception`) if the order
   doesn't exist.
 - `PUT .../status` **requires authentication**, but does **not** yet
   verify the authenticated user owns the station the order belongs to

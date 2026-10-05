@@ -31,7 +31,7 @@ session rather than waiting for the JWT to expire naturally.
 3. Create the `UserModel` row and a `TokenModel` row in **one transaction**.
 4. Issue a JWT via `manager.create_access_token(...)` and set it as an
    `httponly`, `samesite=lax` cookie named `station`.
-5. On duplicate email, roll back and raise `DuplicateEmailException` (409).
+5. On duplicate email, roll back and raise `duplicate_email_exception()` (409).
 
 ### Sign In (`POST /auth/sign-in`)
 1. Validate payload via `UserLoginSchema`.

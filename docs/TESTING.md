@@ -27,7 +27,7 @@ equivalent. That method's query-building guard clause (rejecting queries
 under 3 characters) is tested directly; the full-text search path itself
 is documented as **requiring manual/integration testing against a real
 MariaDB instance** (see `test_search_stations_by_name_full_text_requires_mariadb`
-in `tests/test_station_model.py`).
+in `../tests/station/test_station_model.py`).
 
 ## Running Tests
 
@@ -76,19 +76,19 @@ cause rather than suppressing — see [ISSUES.md](ISSUES.md) for examples.
 
 ## Test Layout
 
-| File                                  | Scope                                                                                                                                        |
-|---------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
-| `tests/conftest.py`                   | Shared fixtures: `client` (TestClient wired to SQLite), `db_session` (raw session), `user_factory`, `auth_client` (pre-authenticated client) |
-| `tests/test_auth_password.py`         | Unit — `auth/password.py` bcrypt hashing/verification                                                                                        |
-| `tests/test_validation_user.py`       | Unit — `validations/user.py` password-strength & name validators                                                                             |
-| `tests/test_auth_router.py`           | Integration — `/auth/sign-up`, `/sign-in`, `/sign-out`, `/me`                                                                                |
-| `tests/test_stations.py`              | Integration — `/stations/*` CRUD + nearest search                                                                                            |
-| `tests/test_services_router.py`       | Integration — `/services/*` CRUD                                                                                                             |
-| `tests/test_customer_router.py`       | Integration — `POST /customer`                                                                                                               |
-| `tests/test_station_model.py`         | Unit — `StationModel` classmethods (soft delete, restore, nearest search)                                                                    |
-| `tests/test_station_service_model.py` | Unit — `StationServiceModel` classmethods                                                                                                    |
-| `tests/test_station_user_model.py`    | Unit — `StationUserModel` (role assignment, unique constraint)                                                                               |
-| `tests/test_user_model.py`            | Unit — `UserModel.get_user_by_email`                                                                                                         |
+| File                                             | Scope                                                                                                                                        |
+|--------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| `tests/conftest.py`                              | Shared fixtures: `client` (TestClient wired to SQLite), `db_session` (raw session), `user_factory`, `auth_client` (pre-authenticated client) |
+| `../tests/auth/test_auth_password.py`            | Unit — `auth/password.py` bcrypt hashing/verification                                                                                        |
+| `tests/test_validation_user.py`                  | Unit — `validations/user.py` password-strength & name validators                                                                             |
+| `../tests/routers/test_auth_router.py`           | Integration — `/auth/sign-up`, `/sign-in`, `/sign-out`, `/me`                                                                                |
+| `../tests/station/test_stations.py`              | Integration — `/stations/*` CRUD + nearest search                                                                                            |
+| `../tests/services/test_services_router.py`      | Integration — `/services/*` CRUD                                                                                                             |
+| `tests/test_customer_router.py`                  | Integration — `POST /customer`                                                                                                               |
+| `../tests/station/test_station_model.py`         | Unit — `StationModel` classmethods (soft delete, restore, nearest search)                                                                    |
+| `../tests/station/test_station_service_model.py` | Unit — `StationServiceModel` classmethods                                                                                                    |
+| `../tests/station/test_station_user_model.py`    | Unit — `StationUserModel` (role assignment, unique constraint)                                                                               |
+| `../tests/user/test_user_model.py`               | Unit — `UserModel.get_user_by_email`                                                                                                         |
 
 ## Why `database.engine` Is Monkey-Patched in `conftest.py`
 

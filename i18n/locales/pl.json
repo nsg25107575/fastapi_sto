@@ -1,0 +1,37 @@
+{
+  "application": {
+    "error": "Wystąpił błąd",
+    "not_found": "Zasób nie znaleziony"
+  },
+  "validation": {
+    "password_requires_digit": "Hasło musi zawierać co najmniej jedną cyfrę.",
+    "password_requires_uppercase": "Hasło musi zawierać co najmniej jedną wielką literę.",
+    "password_requires_lowercase": "Hasło musi zawierać co najmniej jedną małą literę.",
+    "password_requires_special_char": "Hasło musi zawierać co najmniej jeden znak specjalny (!@#$%^&*, etc.).",
+    "field_empty": "Pole nie może być puste lub składać się wyłącznie z spacji.",
+    "name_invalid_chars": "Dozwolone są tylko litery, spacje, myślniki i cudzysłowy. Liczby i znaki specjalne są zabronione."
+  },
+  "station": {
+    "not_found": "Stacja nie znaleziona",
+    "invalid_coordinates": "Nieprawidłowe współrzędne",
+    "duplicate": "Stacja o tym samym nazwie i adresie już istnieje"
+  },
+  "service": {
+    "not_found": "Usługa nie znaleziona"
+  },
+  "auth": {
+    "email_already_in_use": "Adres e-mail jest już używany",
+    "session_expired": "Sesja wygasła lub została unieważniona",
+    "registration_successful": "Rejestracja zakończona sukcesem",
+    "login_successful": "Logowanie zakończone sukcesem",
+    "logout_successful": "Wylogowanie zakończone sukcesem, sesja zakończona",
+    "user_info_retrieved": "Informacje o użytkowniku zostały pomyślnie pobrane"
+  },
+  "order": {
+    "not_found": "Zamówienie nie znalezione",
+    "invalid_service": "Określona usługa nie należy do określonej stacji"
+  },
+  "geocoding": {
+    "failed": "Nie udało się zrozumieć współrzędnych dla podanego adresu"
+  }
+}

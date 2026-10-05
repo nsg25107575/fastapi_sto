@@ -1,4 +1,5 @@
 import dataclasses as dataclass
+import json
 import os
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -40,6 +41,12 @@ class Config:
     # App configuration
     app_env: str = os.getenv("APP_ENV", "development")
     app_timezone: str = os.getenv("APP_TIMEZONE", "Europe/Kyiv")
+    # Default locale for i18n, used when no other locale is specified or detected
+    app_default_locale: str = os.getenv("APP_DEFAULT_LOCALE", "en")
+    # Supported locales for i18n
+    app_sup_locales: tuple[dict, ...] = tuple(json.loads(
+        os.getenv("APP_SUPPORTED_LOCALES", '[{"abbr":"en","name":"English"}]')
+    ))
     # App configuration for search
     app_nearest_stations_limit: int = int(os.getenv("APP_NEAREST_STATION_LIMIT", 10))
 

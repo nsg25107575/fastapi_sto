@@ -8,7 +8,8 @@ from auth.config import manager, COOKIE_PARAMS
 from auth.password import verify_password
 from config import Config
 from database.engine import engine
-from exceptions import DuplicateEmailException
+from exceptions import duplicate_email_exception
+from i18n.dependency_translator import t
 from models.token import TokenModel
 from models.user import UserModel
 from validations.user import UserCreateSchema, UserLoginSchema
@@ -50,9 +51,9 @@ def sign_up(credentials: UserCreateSchema) -> JSONResponse:
                 content={"detail": [
                     {
                         "type": "success",
-                        "msg": "Registration successful",
+                        "msg": t("auth.registration_successful"),
                         "id": new_user.id,
-                        # Токен НЕ повертаємо в JSON для безпеки від XSS
+                        # We do NOT return the token in the JSON to protect against XSS
                         "redirect_to": "/dashboard"
                     }
                 ]},
@@ -65,7 +66,7 @@ def sign_up(credentials: UserCreateSchema) -> JSONResponse:
             return response
         except IntegrityError:
             session.rollback()  # Rollback database changes if the email is already taken
-            raise DuplicateEmailException
+            raise duplicate_email_exception()
 
 
 @router.post("/sign-in", response_model=None, status_code=status.HTTP_202_ACCEPTED)
@@ -90,7 +91,7 @@ def sign_in(credentials: UserLoginSchema) -> JSONResponse:
             content={"detail": [
                 {
                     "type": "success",
-                    "msg": "Login successful"
+                    "msg": t("auth.login_successful")
                 }
             ]},
             # Explicit — JSONResponse defaults to 200, which would silently
@@ -123,7 +124,7 @@ def sign_out(request: Request) -> JSONResponse:
         content={"detail": [
             {
                 "type": "success",
-                "msg": "Logout successful, session terminated"
+                "msg": t("auth.logout_successful")
             }
         ]},
         status_code=status.HTTP_200_OK
@@ -152,7 +153,7 @@ def get_current_user(current_user: UserModel = Depends(manager)) -> JSONResponse
         content={"detail": [
             {
                 "type": "success",
-                "msg": "User info retrieved successfully",
+                "msg": t("auth.user_info_retrieved"),
                 "id": current_user.id,
                 "email": current_user.email,
                 "first_name": current_user.first_name,

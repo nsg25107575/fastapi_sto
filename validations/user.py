@@ -2,6 +2,36 @@ import re
 
 from pydantic import BaseModel, Field, field_validator, EmailStr
 
+from i18n.dependency_translator import t
+
+
+def _validate_password_strength(value: str) -> str:
+    """Shared password-strength check used by both create and update schemas."""
+    if not re.search(r"\d", value):
+        raise ValueError(t("validation.password_requires_digit"))
+    if not re.search(r"[A-Z]", value):
+        raise ValueError(t("validation.password_requires_uppercase"))
+    if not re.search(r"[a-z]", value):
+        raise ValueError(t("validation.password_requires_lowercase"))
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", value):
+        raise ValueError(t("validation.password_requires_special_char"))
+    return value
+
+
+def _validate_name_field(value: str) -> str:
+    """Shared name-field check (empty/whitespace + allowed characters) used by
+    both create and update schemas. Does NOT handle the None-passthrough or
+    capitalization - callers do that themselves."""
+    if len(value) == 0:
+        raise ValueError(t("validation.field_empty"))
+
+    name_regex = r"^[a-zA-Zа-яА-Яіїєґ#'’`\s-]+$"
+
+    if not re.match(name_regex, value):
+        raise ValueError(t("validation.name_invalid_chars"))
+
+    return value
+
 
 class UserCreateSchema(BaseModel):
     email: EmailStr
@@ -14,20 +44,7 @@ class UserCreateSchema(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_password_strength(cls, value: str) -> str:
-        # Check for the presence of at least one digit
-        if not re.search(r"\d", value):
-            raise ValueError("The password must contain at least one digit.")
-        # Check for the presence of at least one uppercase letter
-        if not re.search(r"[A-Z]", value):
-            raise ValueError("The password must contain at least one uppercase letter.")
-        # Check for the presence of at least one lowercase letter
-        if not re.search(r"[a-z]", value):
-            raise ValueError("The password must contain at least one lowercase letter.")
-        # Check for special characters (optional, but recommended for security)
-        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", value):
-            raise ValueError("The password must contain at least one special character (!@#$%^&*, etc.).")
-
-        return value
+        return _validate_password_strength(value)
 
     @field_validator("first_name", "second_name", "last_name")
     @classmethod
@@ -35,23 +52,10 @@ class UserCreateSchema(BaseModel):
         if value is None:
             return value
 
-        # Remove extra spaces from the beginning and end
         value = value.strip()
 
-        # Check to ensure the string does not become empty after removing whitespace
-        if len(value) == 0:
-            raise ValueError("The field cannot be empty or consist only of spaces.")
+        value = _validate_name_field(value)
 
-        # Regular expression for validating letters, hyphens, and apostrophes
-        name_regex = r"^[a-zA-Zа-яА-ЯіІїЇєЄґҐ#'’`\s-]+$"
-
-        if not re.match(name_regex, value):
-            raise ValueError(
-                "Only letters, spaces, hyphens, and apostrophes are allowed. Numbers and special characters are prohibited."
-            )
-
-        # We format it so that the first letter is automatically capitalized (e.g., "ivan" -> "Ivan").
-        # If the name is double-barreled, capitalize each part (e.g., "anna-maria" -> "Anna-Maria").
         if "-" in value:
             value = "-".join(part.capitalize() for part in value.split("-"))
         else:
@@ -73,21 +77,7 @@ class UserUpdateSchema(BaseModel):
         if value is None:
             return value
 
-        if not re.search(r"\d", value):
-            raise ValueError("The password must contain at least one digit.")
-
-        if not re.search(r"[A-Z]", value):
-            raise ValueError("The password must contain at least one uppercase letter.")
-
-        if not re.search(r"[a-z]", value):
-            raise ValueError("The password must contain at least one lowercase letter.")
-
-        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", value):
-            raise ValueError(
-                "The password must contain at least one special character (!@#$%^&*, etc.)."
-            )
-
-        return value
+        return _validate_password_strength(value)
 
     @field_validator("first_name", "second_name", "last_name")
     @classmethod
@@ -97,16 +87,7 @@ class UserUpdateSchema(BaseModel):
 
         value = value.strip()
 
-        if len(value) == 0:
-            raise ValueError("The field cannot be empty or consist only of spaces.")
-
-        name_regex = r"^[a-zA-Zа-яА-ЯіІїЇєЄґҐ#'’`\s-]+$"
-
-        if not re.match(name_regex, value):
-            raise ValueError(
-                "Only letters, spaces, hyphens, and apostrophes are allowed. "
-                "Numbers and special characters are prohibited."
-            )
+        value = _validate_name_field(value)
 
         if "-" in value:
             value = "-".join(part.capitalize() for part in value.split("-"))

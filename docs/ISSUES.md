@@ -58,7 +58,10 @@ request bodies. Inconsistent and harder to validate/document.
 `routers/service.py` raises `"Услуга не найдена"` (Russian) while
 `exceptions/exceptions.py` messages are English. Inconsistent for API
 consumers. **Fix:** move service-not-found to a named exception in
-`exceptions/exceptions.py`, in English, consistent with the rest.
+`exceptions/exceptions.py`, in English, consistent with the rest. **✅ Resolved** (task #77): all user-facing strings —
+including this one —
+now go through the i18n layer (`t("service.not_found")`), with
+translations in `en`/`uk`/`pl`. No more hardcoded Russian text.
 
 ### 🟡 ISSUE-9: Inconsistent success/error response envelopes
 Success responses in `routers/auth.py` use
@@ -76,8 +79,8 @@ unused column via a migration.
 
 ### 🟢 ISSUE-11: `station_id` not validated in `services` router
 `POST /services/` accepts any `station_id` without checking the station
-exists — creates orphaned/invalid rows if given a bad id.
-**Fix:** look up the station first, raise `StationNotFoundException` if
+exists — creates orphaned/invalid rows if given a bad id. **Fix:** look up the station first, raise
+`station_not_found_exception()` if
 missing.
 
 ### 🟢 ISSUE-12: Unused imports / duplicate `get_current_user` definitions
@@ -282,7 +285,7 @@ on Windows).
 
 ## Testing Gaps (addressed in this pass)
 
-- Prior to this pass, only `tests/test_stations.py` existed, and it
+- Prior to this pass, only `../tests/station/test_stations.py` existed, and it
   depended on a real MariaDB connection with no isolation (shared
   `TestSessionLocal`, no transaction rollback between tests, no fixtures
   for users/auth).

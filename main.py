@@ -1,11 +1,15 @@
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from config import Config
+from exceptions.exceptions import application_not_found_exception
+from i18n.context import set_current_locale
+from i18n.dependency import get_locale
+from i18n.dependency_translator import t
 from routers.auth import router as auth_router
 from routers.customer import router as customer_router
 from routers.order import router as order_router
@@ -25,8 +29,7 @@ app.include_router(order_router)
 app.include_router(service_router)
 
 
-
-# Lock down the interactive schema/docs endpoints outside of local
+# Lock down the interactive schema/docs endpoints outside local
 # development. Checked at REQUEST time (not import/startup time) against
 # Config.app_env, so tests can flip it per-test via monkeypatch and a
 # running process reflects an APP_ENV change without needing a restart
@@ -36,15 +39,18 @@ app.include_router(service_router)
 # which is what happened at sto.kirweb.space/docs prior to this fix.
 @app.middleware("http")
 async def block_schema_endpoints_outside_dev(request: Request, call_next):
+    set_current_locale(get_locale(request))
+
     if request.url.path == "/openapi.json" and Config.app_env != "development":
-        return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        return JSONResponse(status_code=404, content={"detail": t("not_found")})
+
     return await call_next(request)
 
 
 @app.get("/docs", include_in_schema=False)
 async def custom_docs():
     if Config.app_env != "development":
-        raise HTTPException(status_code=404, detail="Not Found")
+        raise application_not_found_exception()
 
     return HTMLResponse(
         f"""
@@ -219,8 +225,6 @@ document.addEventListener('DOMContentLoaded', () => {{
             }}
         }});
     }}
-
-    // Следим за динамически создаваемыми элементами Swagger
     const observer = new MutationObserver(() => {{
         fillSwaggerDataForCustomerData();
         fillNearestStationsParameters();
@@ -230,8 +234,6 @@ document.addEventListener('DOMContentLoaded', () => {{
         childList: true,
         subtree: true
     }});
-
-    // Проверяем сразу
     fillSwaggerDataForCustomerData();
     fillNearestStationsParameters();
 }});

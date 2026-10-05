@@ -1,50 +1,89 @@
 from fastapi import HTTPException
-from starlette.status import HTTP_409_CONFLICT, HTTP_401_UNAUTHORIZED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
-
-StationNotFoundException = HTTPException(
-    status_code=HTTP_404_NOT_FOUND,
-    detail="Station not found",
-    headers={"WWW-Authenticate": "Bearer"},
+from starlette.status import (
+    HTTP_409_CONFLICT,
+    HTTP_401_UNAUTHORIZED,
+    HTTP_400_BAD_REQUEST,
+    HTTP_404_NOT_FOUND,
 )
 
-InvalidCoordinateException = HTTPException(
-    status_code=HTTP_400_BAD_REQUEST,
-    detail="Invalid coordinates",
-    headers={"WWW-Authenticate": "Bearer"},
-)
+from i18n.dependency_translator import t
 
-DuplicateEmailException = HTTPException(
-    status_code=HTTP_409_CONFLICT,
-    detail="Email already in use",
-    headers={"WWW-Authenticate": "Bearer"},
-)
 
-DuplicateStationException = HTTPException(
-    status_code=HTTP_409_CONFLICT,
-    detail="Station with this name and address already exists",
-    headers={"WWW-Authenticate": "Bearer"},
-)
+def application_not_found_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_404_NOT_FOUND,
+        detail=t("application.not_found", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
-TokenExpiredException = HTTPException(
-    status_code=HTTP_401_UNAUTHORIZED,
-    detail="The session has expired or has been invalidated.",
-    headers={"WWW-Authenticate": "Bearer"},
-)
 
-OrderNotFoundException = HTTPException(
-    status_code=HTTP_404_NOT_FOUND,
-    detail="Order not found",
-    headers={"WWW-Authenticate": "Bearer"},
-)
+def station_not_found_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_404_NOT_FOUND,
+        detail=t("station.not_found", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
-InvalidOrderServiceException = HTTPException(
-    status_code=HTTP_400_BAD_REQUEST,
-    detail="The specified service does not belong to the specified station",
-    headers={"WWW-Authenticate": "Bearer"},
-)
 
-GeocodingFailedException = HTTPException(
-    status_code=HTTP_400_BAD_REQUEST,
-    detail="Could not resolve coordinates for the given address",
-    headers={"WWW-Authenticate": "Bearer"},
-)
+def service_not_found_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_404_NOT_FOUND,
+        detail=t("service.not_found", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def invalid_coordinate_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_400_BAD_REQUEST,
+        detail=t("station.invalid_coordinates", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def duplicate_email_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_409_CONFLICT,
+        detail=t("auth.email_already_in_use", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def duplicate_station_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_409_CONFLICT,
+        detail=t("station.duplicate", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def token_expired_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_401_UNAUTHORIZED,
+        detail=t("auth.session_expired", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def order_not_found_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_404_NOT_FOUND,
+        detail=t("order.not_found", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def invalid_order_service_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_400_BAD_REQUEST,
+        detail=t("order.invalid_service", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def geocoding_failed_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_400_BAD_REQUEST,
+        detail=t("geocoding.failed", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )

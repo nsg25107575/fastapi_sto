@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from auth.dependencies import get_current_user
 from config import Config
 from database.engine import get_session
-from exceptions import DuplicateStationException, GeocodingFailedException, InvalidCoordinateException, \
-    StationNotFoundException
+from exceptions import duplicate_station_exception, geocoding_failed_exception, invalid_coordinate_exception, \
+    station_not_found_exception
 from models.station import StationModel
 from models.user import UserModel
 from services.geocoding import GeocodingError, geocode_address
@@ -33,7 +33,7 @@ def add_station(
     try:
         latitude, longitude = geocode_address(payload.address)
     except GeocodingError:
-        raise GeocodingFailedException
+        raise geocoding_failed_exception()
 
     try:
         station = StationModel.create_station(
@@ -48,7 +48,7 @@ def add_station(
         return station
     except IntegrityError:
         session.rollback()
-        raise DuplicateStationException
+        raise duplicate_station_exception()
 
 
 @router.get("/",
@@ -68,7 +68,7 @@ def get_nearest_stations(
         session: Session = Depends(get_session)
 ) -> list[StationModel]:
     if not (-90 <= coordinates.lat <= 90) or not (-180 <= coordinates.lng <= 180):
-        raise InvalidCoordinateException
+        raise invalid_coordinate_exception()
 
     return StationModel.read_nearest_stations(
         session=session, lat=coordinates.lat, lng=coordinates.lng,
@@ -80,7 +80,7 @@ def get_nearest_stations(
 def get_station(station_id: int, session: Session = Depends(get_session)):
     station = StationModel.read_station(session=session, station_id=station_id)
     if station is None:
-        raise StationNotFoundException
+        raise station_not_found_exception()
     return station
 
 
@@ -100,7 +100,7 @@ def update_station(
         try:
             latitude, longitude = geocode_address(update_fields["address"])
         except GeocodingError:
-            raise GeocodingFailedException
+            raise geocoding_failed_exception()
         update_fields["latitude"] = latitude
         update_fields["longitude"] = longitude
 
@@ -112,13 +112,13 @@ def update_station(
         )
 
         if station is None:
-            raise StationNotFoundException
+            raise station_not_found_exception()
 
         session.commit()
         return station
     except IntegrityError:
         session.rollback()
-        raise DuplicateStationException
+        raise duplicate_station_exception()
 
 
 @router.delete("/{station_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT)
@@ -130,7 +130,7 @@ def delete_station(
     station = StationModel.delete_station(session=session, station_id=station_id)
 
     if station is None:
-        raise StationNotFoundException
+        raise station_not_found_exception()
 
     session.commit()
     return None

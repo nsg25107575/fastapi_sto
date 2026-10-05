@@ -143,10 +143,10 @@ def user_factory(db_session):
     created = []
 
     def _make(
-        email: str | None = None,
-        password: str = "StrongPass1!",
-        first_name: str = "Test",
-        last_name: str = "User",
+            email: str | None = None,
+            password: str = "StrongPass1!",
+            first_name: str = "Test",
+            last_name: str = "User",
     ):
         import uuid
         email = email or f"user-{uuid.uuid4().hex[:8]}@example.com"

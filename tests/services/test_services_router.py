@@ -167,10 +167,55 @@ def test_read_services_respects_limit(auth_client):
     assert data["total"] == 3
 
 
-def test_read_services_rejects_limit_above_max(client):
+def test_read_services_rejects_limit_above_max(auth_client):
     """
     Test that the /services/ endpoint rejects requests with a 'limit' parameter above the maximum allowed value (100).
     """
+    client, _user = auth_client
     response = client.get("/services/", params={"limit": 101})
 
     assert response.status_code == 422
+
+
+def test_read_service_returns_translated_not_found_message_for_uk(auth_client):
+    """
+    Test that the /services/{service_id} endpoint returns a translated "not found" message
+    when the Accept-Language header is set to 'uk'.
+    """
+    client, _user = auth_client
+    response = client.get("/services/999999", headers={"accept-language": "uk"})
+    assert response.status_code == 404
+    assert response.json()["detail"] != "Service not found"  # must be a translation, not an en-fallback
+
+
+def test_read_service_returns_english_not_found_message_by_default(auth_client):
+    """
+    Test that the /services/{service_id} endpoint returns an English "not found" message
+    when the Accept-Language header is not set or is set to an unsupported language.
+    """
+    client, _user = auth_client
+    response = client.get("/services/999999")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Service not found"
+
+
+def test_edit_service_returns_translated_not_found_message(auth_client):
+    """
+    Test that the /services/{service_id} endpoint returns a translated "not found" message
+    when trying to edit a non-existent service with the Accept-Language header set to 'uk'.
+    """
+    client, _user = auth_client
+    response = client.put("/services/999999", json={"name": "x"}, headers={"accept-language": "uk"})
+    assert response.status_code == 404
+    assert response.json()["detail"] != "Service not found"
+
+
+def test_remove_service_returns_translated_not_found_message(auth_client):
+    """
+    Test that the /services/{service_id} endpoint returns a translated "not found" message
+    when trying to delete a non-existent service with the Accept-Language header set to 'uk'.
+    """
+    client, _user = auth_client
+    response = client.delete("/services/999999", headers={"accept-language": "uk"})
+    assert response.status_code == 404
+    assert response.json()["detail"] != "Service not found"

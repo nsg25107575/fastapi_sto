@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from auth.dependencies import get_current_user
 from database.engine import get_session
-from exceptions import InvalidOrderServiceException, OrderNotFoundException
+from exceptions import invalid_order_service_exception, order_not_found_exception
 from models.order import OrderModel
 from models.user import UserModel
 from validations.order import OrderCreateSchema, OrderResponseSchema, OrderStatusUpdateSchema
@@ -35,14 +35,14 @@ def create_order(
         return order
     except ValueError:
         session.rollback()
-        raise InvalidOrderServiceException
+        raise invalid_order_service_exception()
 
 
 @router.get("/{order_id}", response_model=OrderResponseSchema)
 def get_order(order_id: int, session: Session = Depends(get_session)):
     order = OrderModel.read_order(session=session, order_id=order_id)
     if order is None:
-        raise OrderNotFoundException
+        raise order_not_found_exception()
     return order
 
 
@@ -68,7 +68,7 @@ def update_order_status(
         session=session, order_id=order_id, status=payload.status
     )
     if order is None:
-        raise OrderNotFoundException
+        raise order_not_found_exception()
 
     session.commit()
     return order

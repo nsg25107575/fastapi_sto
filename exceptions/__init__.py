@@ -7,23 +7,23 @@ Re-exports the shared HTTPException instances from
 unchanged after the `exceptions.py` -> `exceptions/` module refactor.
 """
 from exceptions.exceptions import (
-    StationNotFoundException,
-    InvalidCoordinateException,
-    DuplicateEmailException,
-    DuplicateStationException,
-    TokenExpiredException,
-    OrderNotFoundException,
-    InvalidOrderServiceException,
-    GeocodingFailedException,
+    station_not_found_exception,
+    invalid_coordinate_exception,
+    duplicate_email_exception,
+    duplicate_station_exception,
+    token_expired_exception,
+    order_not_found_exception,
+    invalid_order_service_exception,
+    geocoding_failed_exception,
 )
 
 __all__ = [
-    "StationNotFoundException",
-    "InvalidCoordinateException",
-    "DuplicateEmailException",
-    "DuplicateStationException",
-    "TokenExpiredException",
-    "OrderNotFoundException",
-    "InvalidOrderServiceException",
-    "GeocodingFailedException",
+    "station_not_found_exception",
+    "invalid_coordinate_exception",
+    "duplicate_email_exception",
+    "duplicate_station_exception",
+    "token_expired_exception",
+    "order_not_found_exception",
+    "invalid_order_service_exception",
+    "geocoding_failed_exception",
 ]
