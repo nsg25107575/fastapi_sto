@@ -6,7 +6,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from config import Config
-from exceptions.exceptions import application_not_found_exception
+from exceptions.exceptions import app_not_found_exception
 from i18n.context import set_current_locale
 from i18n.dependency import get_locale
 from i18n.dependency_translator import t
@@ -50,7 +50,7 @@ async def block_schema_endpoints_outside_dev(request: Request, call_next):
 @app.get("/docs", include_in_schema=False)
 async def custom_docs():
     if Config.app_env != "development":
-        raise application_not_found_exception()
+        raise app_not_found_exception()
 
     return HTMLResponse(
         f"""
