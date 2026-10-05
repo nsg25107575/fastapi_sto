@@ -8,7 +8,7 @@
   migrate migrate-up-index migrate-down-index migrate-up migrate-down \
   build up up-build down restart logs ps \
   _ensure_uv deps-update deps-update-package deps-outdated \
-  test test-verbose test-cov test-cov-html test-file
+  test test-smoke test-verbose test-cov test-cov-html test-file
 
 # ───────────────────────────────────────────────────────────────────────────
 # Everything below (deps-*, test*, migrate-*) runs INSIDE the `api`
@@ -93,9 +93,15 @@ deps-outdated:
 # tests/conftest.py, NOT the `db` MariaDB service — safe to run against
 # a live stack without touching real data.
 # ───────────────────────────────────────────────────────────────────────────
-## Run the full test suite inside the api container
-test:
+## Run the smoke checks first, then the full test suite inside the api container
+test: test-smoke
 	$(DC) exec api python -m pytest -q
+## Run only the smoke checks (tests/smoke/*.sh) against the live stack: DB wiring and connectivity.
+## They are read-only (SELECT 1 / TCP connect), but unlike pytest they DO talk to the real `db` service.
+## DC is passed down so the scripts use the same compose command as the other targets.
+test-smoke:
+	DC="$(DC)" bash tests/smoke/database_url_check.sh
+	DC="$(DC)" bash tests/smoke/db_host_port_check.sh
 ## Run the full test suite inside the api container with verbose per-test output
 test-verbose:
 	$(DC) exec api python -m pytest -v

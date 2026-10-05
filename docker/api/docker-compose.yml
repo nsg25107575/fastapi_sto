@@ -17,28 +17,28 @@ services:
     build:
       context: .
       dockerfile: docker/api/Dockerfile
-    container_name: kws_station_api
+    container_name: ${APP_NAME:-kws_station_api}
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      DATABASE_URL: "mariadb+mariadbconnector://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT:-3306}/${DB_NAME}"
-      DB_HOST: db
-      APP_PORT: "${APP_PORT:-8000}"
+      DATABASE_URL: "mariadb+mariadbconnector://${DB_USER:-root}:${DB_PASSWORD:-}@${DB_HOST:-kws_station_db}:${DB_PORT:-3306}/${DB_NAME:-kws_station}"
+      DB_HOST: ${DB_HOST:-kws_station_db}
+      APP_PORT: "${APP_PORT:-8333}"
       # Scale workers to CPU cores available to this container; raise together
       # with the resource limits below and MariaDB max_connections.
-      UVICORN_WORKERS: "4"
-      UVICORN_LIMIT_CONCURRENCY: "1000"
-      UVICORN_BACKLOG: "2048"
-      UVICORN_KEEPALIVE: "5"
+      UVICORN_WORKERS: ${UVICORN_WORKERS:-"4"}
+      UVICORN_LIMIT_CONCURRENCY: ${UVICORN_LIMIT_CONCURRENCY:-"1000"}
+      UVICORN_BACKLOG: ${UVICORN_BACKLOG:-"2048"}
+      UVICORN_KEEPALIVE: ${UVICORN_KEEPALIVE:-"5"}
       # Per-worker SQLAlchemy pool; total DB connections used by this
       # service scales as UVICORN_WORKERS * (DB_POOL_SIZE + DB_POOL_MAX_OVERFLOW).
-      DB_POOL_SIZE: "10"
-      DB_POOL_MAX_OVERFLOW: "20"
-      DB_POOL_TIMEOUT: "30"
-      DB_POOL_RECYCLE: "1800"
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-"10"}
+      DB_POOL_MAX_OVERFLOW: ${DB_POOL_MAX_OVERFLOW:-"20"}
+      DB_POOL_TIMEOUT: ${DB_POOL_TIMEOUT:-"30"}
+      DB_POOL_RECYCLE: ${DB_POOL_RECYCLE:-"1800"}
     ports:
-      - "${APP_PORT:-8000}:${APP_PORT:-8000}"
+      - "${APP_PORT:-8333}:${APP_PORT:-8333}"
     depends_on:
       db:
         condition: service_healthy
@@ -66,15 +66,15 @@ services:
 
   db:
     image: mariadb:latest
-    container_name: kws_station_db
+    container_name: ${DB_HOST:-kws_station_db}
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
-      MARIADB_DATABASE: "${DB_NAME}"
-      MARIADB_USER: "${DB_USER}"
-      MARIADB_PASSWORD: "${DB_PASSWORD}"
+      MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-}"
+      MARIADB_DATABASE: "${DB_NAME:-kws_station}"
+      MARIADB_USER: "${DB_USER:-kws_station}"
+      MARIADB_PASSWORD: "${DB_PASSWORD:-}"
     # Tuning for high concurrency: raise max_connections, give InnoDB a
     # bigger buffer pool, and use several I/O threads. Adjust
     # innodb_buffer_pool_size to ~60-70% of the memory limit below.
@@ -92,11 +92,11 @@ services:
       - --query_cache_type=0
       - --query_cache_size=0
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "${DB_HOST_PORT:-3310}:3306"
     volumes:
       - kws_station_db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
       interval: 5s
       timeout: 5s
       retries: 10
