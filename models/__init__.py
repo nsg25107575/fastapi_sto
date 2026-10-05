@@ -1,4 +1,5 @@
 from database.engine import Base
+from models.chat_message import ChatMessageModel
 from models.chat_room import ChatRoomModel, ChatRoomStatus
 from models.customer import CustomerModel
 from models.order import OrderModel, OrderStatus
@@ -28,4 +29,5 @@ __all__ = [
     'TokenModel',
     'ChatRoomModel',
     'ChatRoomStatus',
+    'ChatMessageModel',
 ]
