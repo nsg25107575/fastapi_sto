@@ -4,6 +4,7 @@ from starlette.status import (
     HTTP_401_UNAUTHORIZED,
     HTTP_400_BAD_REQUEST,
     HTTP_404_NOT_FOUND,
+    HTTP_403_FORBIDDEN,
 )
 
 from i18n.dependency_translator import t
@@ -86,4 +87,73 @@ def geocoding_failed_exception(locale: str | None = None) -> HTTPException:
         status_code=HTTP_400_BAD_REQUEST,
         detail=t("geocoding.failed", locale=locale),
         headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+# --- Rating ------------------------------------------------------------------------
+
+def rating_value_out_of_range_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_400_BAD_REQUEST,
+        detail=t("review.rating_out_of_range", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def rating_user_id_not_found_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_404_NOT_FOUND,
+        detail=t("review.user_id_not_found", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def rating_station_id_not_found_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_404_NOT_FOUND,
+        detail=t("review.station_id_not_found", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+# --- Review ------------------------------------------------------------------------
+def review_not_found_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_404_NOT_FOUND,
+        detail=t("review.not_found", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def review_forbidden_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_403_FORBIDDEN,
+        detail=t("review.forbidden", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def review_already_exists_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_400_BAD_REQUEST,
+        detail=t("review.already_exists", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+# --- Customer ------------------------------------------------------------------------
+def customer_not_found_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_404_NOT_FOUND,
+        detail=t("customer.not_found", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+# --- Order ------------------------------------------------------------------------
+def order_not_found(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_404_NOT_FOUND,
+        detail=t("order.not_found", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"}
     )

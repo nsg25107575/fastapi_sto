@@ -37,4 +37,6 @@ class NearestStationResponseSchema(BaseModel):
     latitude: float
     longitude: float
     distance_km: float
+    rating: float | None = None
+    reviews_count: int = 0
     services: list[ServiceResponseSchema] = []

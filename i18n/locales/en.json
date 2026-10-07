@@ -33,5 +33,17 @@
   },
   "geocoding": {
     "failed": "Could not resolve coordinates for the given address"
+  },
+  "review": {
+    "not_found": "Review not found",
+    "duplicate": "You have already submitted a review for this station",
+    "rating_out_of_range": "Rating must be between 1 and 5",
+    "user_id_not_found": "User not found",
+    "station_id_not_found": "Station not found",
+    "forbidden": "You cannot edit this review",
+    "already_exists": "You have already submitted a review for this station"
+  },
+  "customer": {
+    "not_found": "Customer not found"
   }
 }

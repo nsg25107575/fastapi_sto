@@ -1,7 +1,7 @@
 import secrets
 import string
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from database.engine import get_session
@@ -29,6 +29,7 @@ def generate_device_hash(length: int = 36) -> str:
 def create_customer(
         customer: CustomerCreate,
         request: Request,
+        response: Response,
         session: Session = Depends(get_session),
 ):
     ip = request.client.host
@@ -45,5 +46,12 @@ def create_customer(
     session.add(new_customer)
     session.commit()
     session.refresh(new_customer)
+    response.set_cookie(
+        key="customer_device",
+        value=device_hash,
+        httponly=True,
+        samesite="lax",
+        secure=False,
+    )
 
     return new_customer

@@ -50,7 +50,6 @@ def add_station(
         session.rollback()
         raise duplicate_station_exception()
 
-
 @router.get("/",
             response_model=PaginatedResponse[StationResponseSchema],
             status_code=status.HTTP_200_OK)

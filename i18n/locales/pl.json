@@ -33,5 +33,17 @@
   },
   "geocoding": {
     "failed": "Nie udało się zrozumieć współrzędnych dla podanego adresu"
+  },
+  "review": {
+    "not_found": "Nie znaleziono recenzji",
+    "duplicate": "Już przesłano opinię na temat tej stacji",
+    "rating_out_of_range": "Ocena musi mieścić się w przedziale od 1 do 5",
+    "user_id_not_found": "Nie znaleziono użytkownika",
+    "station_id_not_found": "Nie znaleziono stacji",
+    "forbidden": "Nie możesz edytować tej opinii",
+    "already_exists": "Już przesłano opinię na temat tej stacji"
+  },
+  "customer": {
+    "not_found": "Nie znaleziono klienta"
   }
 }

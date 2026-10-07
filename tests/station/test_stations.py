@@ -2,6 +2,12 @@
 
 import pytest
 
+from models import StationModel
+from models.customer import CustomerModel
+from models.order import OrderModel
+from models.review import ReviewModel
+from models.station_service import StationServiceModel
+
 
 def test_create_station_requires_auth(client):
     response = client.post("/stations/", json={"name": "Test STO", "address": "1 Main St"})
@@ -343,3 +349,98 @@ def test_get_nearest_stations_rejects_invalid_coordinates(client):
     )
 
     assert response.status_code == 400
+
+
+def test_get_nearest_stations_returns_aggregated_rating(
+        auth_client,
+        db_session,
+):
+    client, user_payload = auth_client
+
+    station = StationModel.create_station(
+        session=db_session,
+        user_id=user_payload["id"],
+        name="Rated STO",
+        address="Rated St",
+    )
+    station.latitude = 50.4501
+    station.longitude = 30.5234
+    db_session.commit()
+
+    service = StationServiceModel.add_service(
+        session=db_session,
+        station_id=station.id,
+        name="Oil change",
+        price=250.0,
+    )
+    db_session.commit()
+
+    customer_1 = CustomerModel(
+        ip="127.0.0.1",
+        device_hash="a" * 36,
+        lat=50.4501,
+        lng=30.5234,
+        public_data={},
+    )
+    customer_2 = CustomerModel(
+        ip="127.0.0.2",
+        device_hash="b" * 36,
+        lat=50.4501,
+        lng=30.5234,
+        public_data={},
+    )
+
+    db_session.add_all([customer_1, customer_2])
+    db_session.commit()
+
+    order_1 = OrderModel.create_order(
+        session=db_session,
+        customer_id=customer_1.id,
+        station_id=station.id,
+        station_service_id=service.id,
+    )
+    db_session.commit()
+
+    order_2 = OrderModel.create_order(
+        session=db_session,
+        customer_id=customer_2.id,
+        station_id=station.id,
+        station_service_id=service.id,
+    )
+    db_session.commit()
+
+    ReviewModel.create_review(
+        session=db_session,
+        order_id=order_1.id,
+        station_id=station.id,
+        customer_id=customer_1.id,
+        rating=5,
+    )
+    ReviewModel.create_review(
+        session=db_session,
+        order_id=order_2.id,
+        station_id=station.id,
+        customer_id=customer_2.id,
+        rating=3,
+    )
+    db_session.commit()
+
+    response = client.request(
+        "GET",
+        "/stations/nearest",
+        json={
+            "lat": 50.4501,
+            "lng": 30.5234,
+        },
+    )
+
+    assert response.status_code == 200
+
+    rated_station = next(
+        item
+        for item in response.json()
+        if item["id"] == station.id
+    )
+
+    assert rated_station["rating"] == 4.0
+    assert rated_station["reviews_count"] == 2

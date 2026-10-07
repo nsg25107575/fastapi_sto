@@ -18,7 +18,6 @@ class OrderResponseSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    customer_id: int
     station_id: int
     station_service_id: int
     status: OrderStatus

@@ -13,6 +13,7 @@ from i18n.dependency_translator import t
 from routers.auth import router as auth_router
 from routers.customer import router as customer_router
 from routers.order import router as order_router
+from routers.review import router as review_router
 from routers.service import router as service_router
 from routers.stations import router as station_router
 
@@ -26,6 +27,7 @@ app.include_router(auth_router)
 app.include_router(customer_router)
 app.include_router(station_router)
 app.include_router(order_router)
+app.include_router(review_router)
 app.include_router(service_router)
 
 

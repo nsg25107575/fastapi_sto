@@ -35,7 +35,6 @@ class StationModel(Base, SoftDeleteMixin):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     address: Mapped[str] = mapped_column(String(200), nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"))
-
     latitude: Mapped[float | None] = mapped_column(Numeric(precision=16, scale=14), nullable=True)
     longitude: Mapped[float | None] = mapped_column(Numeric(precision=16, scale=14), nullable=True)
 
@@ -126,8 +125,8 @@ class StationModel(Base, SoftDeleteMixin):
             limit: int = Config.app_nearest_stations_limit
     ) -> list[Self]:
         """
-        Returns the nearest active stations along with their services,
-        calculating the distance on the database side.
+        Returns the nearest active stations along with their services and
+        on-the-fly aggregated review rating/count.
         """
         # 1. Convert user coordinates to radians for SQL
         rad_lat = radians(lat)
@@ -140,37 +139,61 @@ class StationModel(Base, SoftDeleteMixin):
                 func.cos(func.radians(cls.longitude) - rad_lng) +
                 func.sin(rad_lat) * func.sin(func.radians(cls.latitude))
         )
-        # Protection against NaN: if the value exceeds 1.0 due to an error, force it to 1.0.
-        # If it is less than -1.0, set it to -1.0
+
+        # Protection against floating-point values outside [-1, 1]
         safe_cos_expr = case(
             (cos_expr > 1.0, 1.0),
             (cos_expr < -1.0, -1.0),
             else_=cos_expr
         )
 
-        # 2. Haversine / Cosine formula with safeguards
-        distance_expr = (earth_radius * func.acos(safe_cos_expr)).label("distance_km")
+        # 2. Calculate distance
+        distance_expr = (
+                earth_radius * func.acos(safe_cos_expr)
+        ).label("distance_km")
 
-        # 3. Database query (adding filters for active and non-deleted stations)
+        # 3. Aggregate reviews separately.
+        # This keeps review-specific logic out of StationModel.
+        from models.review import ReviewModel
+
+        reviews_aggregation = (
+            select(
+                ReviewModel.station_id.label("station_id"),
+                func.avg(ReviewModel.rating).label("rating"),
+                func.count(ReviewModel.station_id).label("reviews_count"),
+            )
+            .subquery()
+        )
+
+        # 4. Get nearest stations and attach aggregated review data.
         stmt = (
-            select(cls, distance_expr)
+            select(
+                cls,
+                distance_expr,
+                reviews_aggregation.c.rating,
+                reviews_aggregation.c.reviews_count,
+            )
+            .outerjoin(
+                reviews_aggregation,
+                reviews_aggregation.c.station_id == cls.id
+            )
             .where(
                 cls.latitude.is_not(None),
                 cls.longitude.is_not(None),
-                cls.active.is_(True)  # return only active ones
+                cls.active.is_(True)
             )
             .options(selectinload(cls.services))
-            # sort by the alias or by the expression itself for reliability
             .order_by(text("distance_km"))
             .limit(limit)
         )
 
-        # Fulfilling the request.
+        # 5. Execute query
         results = session.execute(stmt).all()
 
-        # 4. Formulating the final result
+        # 6. Build response
         final_result = []
-        for station, distance_km in results:
+
+        for station, distance_km, rating, reviews_count in results:
             final_result.append({
                 "id": station.id,
                 "name": station.name,
@@ -178,10 +201,17 @@ class StationModel(Base, SoftDeleteMixin):
                 "latitude": station.latitude,
                 "longitude": station.longitude,
                 "distance_km": round(distance_km, 2),
-                # Sorting services by price
+                "rating": float(rating) if rating is not None else None,
+                "reviews_count": reviews_count or 0,
                 "services": [
-                    {"name": srv.name, "price": srv.price}
-                    for srv in sorted(station.services, key=lambda s: s.price if s.price is not None else 0.0)
+                    {
+                        "name": srv.name,
+                        "price": srv.price
+                    }
+                    for srv in sorted(
+                        station.services,
+                        key=lambda s: s.price if s.price is not None else 0.0
+                    )
                 ]
             })
 
