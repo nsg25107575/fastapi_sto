@@ -13,6 +13,10 @@ from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, text, select
 from sqlalchemy.orm import Mapped, mapped_column, Session, relationship
 
 from database.engine import Base
+from models.chat_message import (ChatMessageModel, MessageType, SenderType)
+from models.chat_room import ChatRoomModel
+from models.customer import CustomerModel
+from models.station_service import StationServiceModel
 
 
 class OrderStatus(str, enum.Enum):
@@ -90,8 +94,6 @@ class OrderModel(Base):
         same 400 response as the station/service mismatch rather than a
         raw IntegrityError from the FK constraint.
         """
-        from models.customer import CustomerModel
-        from models.station_service import StationServiceModel
 
         if session.get(CustomerModel, customer_id) is None:
             raise ValueError("customer_id does not refer to an existing customer")
@@ -108,6 +110,10 @@ class OrderModel(Base):
             station_service_id=station_service_id,
         )
         session.add(order)
+        session.flush()
+
+        chat_room = ChatRoomModel(order_id=order.id)
+        session.add(chat_room)
         session.flush()
 
         return order
@@ -134,10 +140,33 @@ class OrderModel(Base):
         """Update an order's status. Returns None if the order does not
         exist (caller maps this to a 404)."""
         order = cls.read_order(session, order_id)
+
         if order is None:
             return None
 
+        old_status = order.status
+
+        if old_status == status:
+            return order
+
         order.status = status
+
+        chat_room = session.query(ChatRoomModel).filter_by(order_id=order_id).one()
+
+        if status == OrderStatus.CONFIRMED:
+            body = "Order accepted"
+        else:
+            body = f"Status: {status.value}"
+
+        system_message = ChatMessageModel(
+            chat_room_id=chat_room.id,
+            message_type=MessageType.SYSTEM,
+            sender_type=SenderType.SYSTEM,
+            sender_id=None,
+            body=body,
+        )
+
+        session.add(system_message)
         session.flush()
 
         return order

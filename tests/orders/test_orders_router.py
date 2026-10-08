@@ -5,6 +5,11 @@
   3. POST /orders             -> place the order
 """
 
+from sqlalchemy import select
+
+from models.chat_message import ChatMessageModel, MessageType, SenderType
+from models.chat_room import ChatRoomModel
+
 
 def _make_customer(client):
     response = client.post(
@@ -47,7 +52,10 @@ def _make_station_with_service(auth_client, db_session):
 
 
 def test_create_order_success(auth_client, db_session, client):
-    station_id, service_id = _make_station_with_service(auth_client, db_session)
+    station_id, service_id = _make_station_with_service(
+        auth_client,
+        db_session,
+    )
     customer = _make_customer(client)
 
     response = client.post(
@@ -61,9 +69,19 @@ def test_create_order_success(auth_client, db_session, client):
 
     assert response.status_code == 201, response.text
     data = response.json()
+
     assert data["station_id"] == station_id
     assert data["station_service_id"] == service_id
     assert data["status"] == "pending"
+
+    chat_room = db_session.scalar(
+        select(ChatRoomModel).where(
+            ChatRoomModel.order_id == data["id"]
+        )
+    )
+
+    assert chat_room is not None
+    assert chat_room.order_id == data["id"]
 
 
 def test_create_order_rejects_mismatched_station_and_service(auth_client, db_session, client):
@@ -147,7 +165,10 @@ def test_update_order_status_requires_auth(auth_client, db_session, client):
 
 def test_update_order_status_success(auth_client, db_session):
     client, _user = auth_client
-    station_id, service_id = _make_station_with_service(auth_client, db_session)
+    station_id, service_id = _make_station_with_service(
+        auth_client,
+        db_session,
+    )
     customer = _make_customer(client)
 
     created = client.post(
@@ -166,6 +187,26 @@ def test_update_order_status_success(auth_client, db_session):
 
     assert response.status_code == 200
     assert response.json()["status"] == "confirmed"
+
+    chat_room = db_session.scalar(
+        select(ChatRoomModel).where(
+            ChatRoomModel.order_id == created["id"]
+        )
+    )
+
+    assert chat_room is not None
+
+    message = db_session.scalar(
+        select(ChatMessageModel).where(
+            ChatMessageModel.chat_room_id == chat_room.id
+        )
+    )
+
+    assert message is not None
+    assert message.message_type == MessageType.SYSTEM
+    assert message.sender_type == SenderType.SYSTEM
+    assert message.sender_id is None
+    assert message.body == "Order accepted"
 
 
 def test_update_order_status_not_found(auth_client):

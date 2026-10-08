@@ -1,6 +1,7 @@
 """Unit tests for ChatRoomModel."""
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from models.chat_room import ChatRoomModel, ChatRoomStatus
@@ -78,13 +79,13 @@ def _make_order(db_session):
 def test_create_chat_room(db_session):
     order = _make_order(db_session)
 
-    chat_room = ChatRoomModel(
-        order_id=order.id,
+    chat_room = db_session.scalar(
+        select(ChatRoomModel).where(
+            ChatRoomModel.order_id == order.id
+        )
     )
 
-    db_session.add(chat_room)
-    db_session.commit()
-
+    assert chat_room is not None
     assert chat_room.id is not None
     assert chat_room.order_id == order.id
     assert chat_room.status == ChatRoomStatus.ACTIVE
@@ -95,12 +96,13 @@ def test_create_chat_room(db_session):
 def test_chat_room_order_id_must_be_unique(db_session):
     order = _make_order(db_session)
 
-    first_chat_room = ChatRoomModel(
-        order_id=order.id,
+    first_chat_room = db_session.scalar(
+        select(ChatRoomModel).where(
+            ChatRoomModel.order_id == order.id
+        )
     )
 
-    db_session.add(first_chat_room)
-    db_session.commit()
+    assert first_chat_room is not None
 
     second_chat_room = ChatRoomModel(
         order_id=order.id,

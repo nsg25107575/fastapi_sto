@@ -1,6 +1,7 @@
 """Unit tests for ChatMessageModel."""
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from models.chat_message import ChatMessageModel, MessageType, SenderType
@@ -79,8 +80,10 @@ def _make_order(db_session):
 def _make_chat_room(db_session):
     order = _make_order(db_session)
 
-    chat_room = ChatRoomModel(
-        order_id=order.id,
+    chat_room = db_session.scalar(
+        select(ChatRoomModel).where(
+            ChatRoomModel.order_id == order.id
+        )
     )
     db_session.add(chat_room)
     db_session.commit()
