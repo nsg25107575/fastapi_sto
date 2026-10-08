@@ -4,7 +4,7 @@ import pytest
 
 from models import StationModel
 from models.customer import CustomerModel
-from models.order import OrderModel
+from models.order import OrderModel, OrderStatus
 from models.review import ReviewModel
 from models.station_service import StationServiceModel
 
@@ -401,11 +401,25 @@ def test_get_nearest_stations_returns_aggregated_rating(
     )
     db_session.commit()
 
+    OrderModel.update_order_status(
+        session=db_session,
+        order_id=order_1.id,
+        status=OrderStatus.COMPLETED,
+    )
+    db_session.commit()
+
     order_2 = OrderModel.create_order(
         session=db_session,
         customer_id=customer_2.id,
         station_id=station.id,
         station_service_id=service.id,
+    )
+    db_session.commit()
+
+    OrderModel.update_order_status(
+        session=db_session,
+        order_id=order_2.id,
+        status=OrderStatus.COMPLETED,
     )
     db_session.commit()
 
