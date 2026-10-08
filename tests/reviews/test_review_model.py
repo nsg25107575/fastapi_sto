@@ -2,7 +2,7 @@ import pytest
 from fastapi.exceptions import HTTPException
 
 from models.customer import CustomerModel
-from models.order import OrderModel
+from models.order import OrderModel, OrderStatus
 from models.review import ReviewModel
 from models.station import StationModel
 from models.station_service import StationServiceModel
@@ -74,7 +74,7 @@ def test_create_review_success(db_session):
     service = _make_service(db_session, station.id)
     customer = _make_customer(db_session)
 
-    order = _make_order(db_session, station, service, customer)
+    order = _make_completed_order(db_session, station, service, customer)
 
     review = ReviewModel.create_review(
         session=db_session,
@@ -96,7 +96,7 @@ def test_create_review_rejects_invalid_rating(
     service = _make_service(db_session, station.id)
     customer = _make_customer(db_session)
 
-    order = _make_order(db_session, station, service, customer)
+    order = _make_completed_order(db_session, station, service, customer)
 
     with pytest.raises(HTTPException) as exc_info:
         ReviewModel.create_review(
@@ -128,7 +128,7 @@ def test_create_review_rejects_duplicate_order(db_session):
     service = _make_service(db_session, station.id)
     customer = _make_customer(db_session)
 
-    order = _make_order(db_session, station, service, customer)
+    order = _make_completed_order(db_session, station, service, customer)
 
     ReviewModel.create_review(
         session=db_session,
@@ -147,3 +147,177 @@ def test_create_review_rejects_duplicate_order(db_session):
             rating=4,
         )
     assert exc_info.value.status_code == 400
+
+
+def test_update_review_success(db_session):
+    user = _make_user(db_session)
+    station = _make_station(db_session, user.id)
+    service = _make_service(db_session, station.id)
+    customer = _make_customer(db_session)
+
+    order = _make_completed_order(db_session, station, service, customer)
+
+    ReviewModel.create_review(
+        session=db_session,
+        order_id=order.id,
+        station_id=station.id,
+        customer_id=customer.id,
+        rating=5,
+        comment="Old comment",
+    )
+
+    updated_review = ReviewModel.update_review(
+        session=db_session,
+        order_id=order.id,
+        station_id=station.id,
+        customer_id=customer.id,
+        rating=3,
+        comment="Updated comment",
+    )
+
+    assert updated_review.rating == 3
+    assert updated_review.comment == "Updated comment"
+
+    review = ReviewModel.get_review(
+        session=db_session,
+        order_id=order.id,
+        station_id=station.id,
+        customer_id=customer.id,
+    )
+
+    assert review is not None
+    assert review.rating == 3
+    assert review.comment == "Updated comment"
+
+
+def test_update_review_not_found(db_session):
+    with pytest.raises(HTTPException) as exc_info:
+        ReviewModel.update_review(
+            session=db_session,
+            order_id=999999,
+            station_id=999999,
+            customer_id=999999,
+            rating=4,
+            comment="Updated",
+        )
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.parametrize("rating", [0, -1, 6, 10])
+def test_update_review_rejects_invalid_rating(
+        db_session,
+        rating,
+):
+    user = _make_user(db_session)
+    station = _make_station(db_session, user.id)
+    service = _make_service(db_session, station.id)
+    customer = _make_customer(db_session)
+
+    order = _make_completed_order(db_session, station, service, customer)
+
+    ReviewModel.create_review(
+        session=db_session,
+        order_id=order.id,
+        station_id=station.id,
+        customer_id=customer.id,
+        rating=5,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        ReviewModel.update_review(
+            session=db_session,
+            order_id=order.id,
+            station_id=station.id,
+            customer_id=customer.id,
+            rating=rating,
+            comment="Invalid rating",
+        )
+
+    assert exc_info.value.status_code == 400
+
+
+def test_delete_review_success(db_session):
+    user = _make_user(db_session)
+    station = _make_station(db_session, user.id)
+    service = _make_service(db_session, station.id)
+    customer = _make_customer(db_session)
+
+    order = _make_completed_order(db_session, station, service, customer)
+
+    ReviewModel.create_review(
+        session=db_session,
+        order_id=order.id,
+        station_id=station.id,
+        customer_id=customer.id,
+        rating=5,
+        comment="To be deleted",
+    )
+
+    result = ReviewModel.delete_review(
+        session=db_session,
+        order_id=order.id,
+        station_id=station.id,
+        customer_id=customer.id,
+    )
+
+    assert result is True
+
+    review = ReviewModel.get_review(
+        session=db_session,
+        order_id=order.id,
+        station_id=station.id,
+        customer_id=customer.id,
+    )
+
+    assert review is None
+
+
+def test_delete_review_not_found(db_session):
+    with pytest.raises(HTTPException) as exc_info:
+        ReviewModel.delete_review(
+            session=db_session,
+            order_id=999999,
+            station_id=999999,
+            customer_id=999999,
+        )
+
+    assert exc_info.value.status_code == 404
+
+
+def _make_completed_order(db_session, station, service, customer):
+    order = _make_order(db_session, station, service, customer)
+
+    OrderModel.update_order_status(
+        session=db_session,
+        order_id=order.id,
+        status=OrderStatus.COMPLETED,
+    )
+    db_session.commit()
+
+    return order
+
+
+def test_create_review_rejects_non_completed_order(db_session):
+    user = _make_user(db_session)
+    station = _make_station(db_session, user.id)
+    service = _make_service(db_session, station.id)
+    customer = _make_customer(db_session)
+
+    order = _make_order(
+        db_session,
+        station,
+        service,
+        customer,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        ReviewModel.create_review(
+            session=db_session,
+            order_id=order.id,
+            station_id=station.id,
+            customer_id=customer.id,
+            rating=5,
+        )
+
+    assert exc_info.value.status_code == 404

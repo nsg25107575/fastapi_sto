@@ -22,6 +22,7 @@ class OrderStatus(str, enum.Enum):
     station-owner tooling for managing orders exists."""
     PENDING = "pending"
     CONFIRMED = "confirmed"
+    COMPLETED = "completed"
     REJECTED = "rejected"
     CANCELLED = "cancelled"
 

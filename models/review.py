@@ -8,7 +8,7 @@ from database.engine import Base
 from exceptions import order_not_found_exception
 from exceptions.exceptions import rating_value_out_of_range_exception, review_already_exists_exception, \
     review_not_found_exception
-from models import OrderModel
+from models import OrderModel, OrderStatus
 
 
 class ReviewModel(Base):
@@ -242,7 +242,8 @@ class ReviewModel(Base):
             select(OrderModel).where(
                 OrderModel.id == order_id,
                 OrderModel.station_id == station_id,
-                OrderModel.customer_id == customer_id
+                OrderModel.customer_id == customer_id,
+                OrderModel.status == OrderStatus.COMPLETED
             )
         )
         return order is not None
