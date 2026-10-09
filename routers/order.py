@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
+from auth.authorization import check_station_ownership
 from auth.dependencies import get_current_user
 from database.engine import get_session
 from exceptions import invalid_order_service_exception, order_not_found_exception
@@ -51,24 +52,26 @@ def update_order_status(
         order_id: int,
         payload: OrderStatusUpdateSchema,
         current_user: UserModel = Depends(get_current_user),
-        session: Session = Depends(get_session)
+        session: Session = Depends(get_session),
 ):
-    """
-    Update an order's status (e.g. a station owner confirming or
-    rejecting an incoming order). Requires authentication -- unlike
-    order creation, which stays anonymous.
-
-    Ownership is NOT yet enforced (any authenticated user can update
-    any order's status) -- consistent with the existing, already-known
-    gap on PUT/DELETE /stations/{id} (see docs/ISSUES.md ISSUE-2);
-    tracked for a follow-up pass once a shared authorization layer is
-    added for both.
-    """
-    order = OrderModel.update_order_status(
-        session=session, order_id=order_id, status=payload.status
+    order = OrderModel.read_order(
+        session=session,
+        order_id=order_id,
     )
+
     if order is None:
         raise order_not_found_exception()
+
+    check_station_ownership(
+        station=order.station,
+        current_user=current_user,
+    )
+
+    order = OrderModel.update_order_status(
+        session=session,
+        order_id=order_id,
+        status=payload.status,
+    )
 
     session.commit()
     return order

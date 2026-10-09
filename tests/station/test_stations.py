@@ -458,3 +458,52 @@ def test_get_nearest_stations_returns_aggregated_rating(
 
     assert rated_station["rating"] == 4.0
     assert rated_station["reviews_count"] == 2
+
+
+def test_update_station_forbidden_for_non_owner(
+        auth_client,
+        second_auth_client,
+):
+    owner_client, _ = auth_client
+
+    created = owner_client.post(
+        "/stations/",
+        json={"name": "Protected STO", "address": "Protected Street"},
+    )
+    assert created.status_code == 201, created.text
+    station_id = created.json()["id"]
+
+    response = second_auth_client.put(
+        f"/stations/{station_id}",
+        json={"name": "Hacked STO"},
+    )
+
+    assert response.status_code == 403
+
+    # The original owner can still see the unchanged station.
+    station = owner_client.get(f"/stations/{station_id}")
+    assert station.status_code == 200
+    assert station.json()["name"] == "Protected STO"
+
+
+def test_delete_station_forbidden_for_non_owner(
+        auth_client,
+        second_auth_client,
+):
+    owner_client, _ = auth_client
+
+    created = owner_client.post(
+        "/stations/",
+        json={"name": "Protected Delete STO", "address": "Protected Street"},
+    )
+    assert created.status_code == 201, created.text
+    station_id = created.json()["id"]
+
+    response = second_auth_client.delete(f"/stations/{station_id}")
+
+    assert response.status_code == 403
+
+    # The station must not have been soft-deleted.
+    station = owner_client.get(f"/stations/{station_id}")
+    assert station.status_code == 200
+    assert station.json()["name"] == "Protected Delete STO"

@@ -13,6 +13,7 @@
   },
   "station": {
     "not_found": "Station not found",
+    "forbidden": "You do not have permission to access this station",
     "invalid_coordinates": "Invalid coordinates",
     "duplicate": "Station with this name and address already exists"
   },

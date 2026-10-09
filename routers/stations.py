@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from auth.authorization import check_station_ownership
 from auth.dependencies import get_current_user
 from config import Config
 from database.engine import get_session
@@ -50,6 +51,7 @@ def add_station(
         session.rollback()
         raise duplicate_station_exception()
 
+
 @router.get("/",
             response_model=PaginatedResponse[StationResponseSchema],
             status_code=status.HTTP_200_OK)
@@ -88,18 +90,31 @@ def update_station(
         station_id: int,
         payload: StationUpdateSchema,
         current_user: UserModel = Depends(get_current_user),
-        session: Session = Depends(get_session)
+        session: Session = Depends(get_session),
 ):
+    # First check that the station exists and belongs to the current user.
+    station = StationModel.read_station(
+        session=session,
+        station_id=station_id,
+    )
+
+    if station is None:
+        raise station_not_found_exception()
+
+    check_station_ownership(
+        station=station,
+        current_user=current_user,
+    )
+
     update_fields = payload.model_dump(exclude_none=True)
 
-    # Re-geocode whenever the address changes -- otherwise latitude/
-    # longitude would silently keep pointing at the OLD address, and
-    # GET /stations/nearest would return a station at the wrong location.
+    # Re-geocode whenever the address changes.
     if "address" in update_fields:
         try:
             latitude, longitude = geocode_address(update_fields["address"])
         except GeocodingError:
             raise geocoding_failed_exception()
+
         update_fields["latitude"] = latitude
         update_fields["longitude"] = longitude
 
@@ -107,7 +122,7 @@ def update_station(
         station = StationModel.update_station(
             session=session,
             station_id=station_id,
-            **update_fields
+            **update_fields,
         )
 
         if station is None:
@@ -115,20 +130,43 @@ def update_station(
 
         session.commit()
         return station
+
     except IntegrityError:
         session.rollback()
         raise duplicate_station_exception()
 
 
-@router.delete("/{station_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{station_id}",
+    response_model=None,
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 def delete_station(
         station_id: int,
         current_user: UserModel = Depends(get_current_user),
-        session: Session = Depends(get_session)
+        session: Session = Depends(get_session),
 ):
-    station = StationModel.delete_station(session=session, station_id=station_id)
+    # First check that the station exists and belongs to the current user.
+    station = StationModel.read_station(
+        session=session,
+        station_id=station_id,
+    )
 
     if station is None:
+        raise station_not_found_exception()
+
+    check_station_ownership(
+        station=station,
+        current_user=current_user,
+    )
+
+    # Soft-delete only after ownership has been verified.
+    deleted_station_id = StationModel.delete_station(
+        session=session,
+        station_id=station_id,
+    )
+
+    if deleted_station_id is None:
         raise station_not_found_exception()
 
     session.commit()

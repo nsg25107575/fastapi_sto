@@ -187,3 +187,26 @@ def auth_client(client):
     user_payload = dict(response.json()["detail"][0])
     user_payload["email"] = email  # not included in the sign-up response body
     return client, user_payload
+
+
+@pytest.fixture
+def second_auth_client(client):
+    """A second authenticated client sharing the test database."""
+    import uuid
+
+    second_client = TestClient(app)
+
+    email = f"second-{uuid.uuid4().hex[:8]}@example.com"
+    response = second_client.post(
+        "/auth/sign-up",
+        json={
+            "email": email,
+            "password": "StrongPass1!",
+            "first_name": "Second",
+            "last_name": "User",
+        },
+    )
+    assert response.status_code == 201, response.text
+
+    yield second_client
+    second_client.close()

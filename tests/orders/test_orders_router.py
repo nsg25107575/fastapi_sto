@@ -218,3 +218,55 @@ def test_update_order_status_not_found(auth_client):
     )
 
     assert response.status_code == 404
+
+
+def test_update_order_status_forbidden_for_non_owner(
+        auth_client,
+        second_auth_client,
+        db_session,
+        client,
+):
+    owner_client, _ = auth_client
+
+    station_id, service_id = _make_station_with_service(
+        auth_client,
+        db_session,
+    )
+    customer = _make_customer(client)
+
+    created_response = client.post(
+        "/orders/",
+        json={
+            "customer_id": customer["id"],
+            "station_id": station_id,
+            "station_service_id": service_id,
+        },
+    )
+    assert created_response.status_code == 201, created_response.text
+    order_id = created_response.json()["id"]
+
+    response = second_auth_client.put(
+        f"/orders/{order_id}/status",
+        json={"status": "confirmed"},
+    )
+
+    assert response.status_code == 403
+
+    # The order status must remain unchanged.
+    order_response = owner_client.get(f"/orders/{order_id}")
+    assert order_response.status_code == 200
+    assert order_response.json()["status"] == "pending"
+
+    # No system message should have been created by the rejected request.
+    chat_room = db_session.scalar(
+        select(ChatRoomModel).where(ChatRoomModel.order_id == order_id)
+    )
+    assert chat_room is not None
+
+    messages = db_session.scalars(
+        select(ChatMessageModel).where(
+            ChatMessageModel.chat_room_id == chat_room.id
+        )
+    ).all()
+
+    assert messages == []

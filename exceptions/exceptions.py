@@ -166,3 +166,12 @@ def chat_room_archived_exception(locale: str | None = None) -> HTTPException:
         detail=t("chat.room_archived", locale=locale),
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+# --- Station ------------------------------------------------------------------------
+def station_forbidden_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_403_FORBIDDEN,
+        detail=t("station.forbidden", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )

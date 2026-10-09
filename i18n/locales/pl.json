@@ -12,9 +12,10 @@
     "name_invalid_chars": "Dozwolone są tylko litery, spacje, myślniki i cudzysłowy. Liczby i znaki specjalne są zabronione."
   },
   "station": {
-    "not_found": "Stacja nie znaleziona",
+    "not_found": "Nie znaleziono stacji",
+    "forbidden": "Nie masz uprawnień do tej stacji",
     "invalid_coordinates": "Nieprawidłowe współrzędne",
-    "duplicate": "Stacja o tym samym nazwie i adresie już istnieje"
+    "duplicate": "Stacja o tej nazwie i adresie już istnieje"
   },
   "service": {
     "not_found": "Usługa nie znaleziona"
