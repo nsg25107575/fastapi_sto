@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 
 from models.chat_message import ChatMessageModel, MessageType, SenderType
-from models.chat_room import ChatRoomModel
+from models.chat_room import ChatRoomModel, ChatRoomStatus
 from models.customer import CustomerModel
 from models.order import OrderModel, OrderStatus
 from models.station import StationModel
@@ -299,3 +299,31 @@ def test_read_orders_by_station(db_session):
         second_order.id,
     }
     assert orders[0].created_at >= orders[1].created_at
+
+
+@pytest.mark.parametrize(
+    "status",
+    [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
+)
+def test_update_order_status_archives_chat_room(db_session, status):
+    order = _make_order(db_session)
+    db_session.commit()
+
+    result = OrderModel.update_order_status(
+        session=db_session,
+        order_id=order.id,
+        status=status,
+    )
+    db_session.commit()
+
+    assert result is not None
+    assert result.status == status
+
+    chat_room = db_session.scalar(
+        select(ChatRoomModel).where(
+            ChatRoomModel.order_id == order.id
+        )
+    )
+
+    assert chat_room is not None
+    assert chat_room.status == ChatRoomStatus.ARCHIVED

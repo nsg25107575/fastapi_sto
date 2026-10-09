@@ -45,5 +45,8 @@
   },
   "customer": {
     "not_found": "Nie znaleziono klienta"
+  },
+  "chat": {
+    "room_archived": "Nie można wysyłać wiadomości do zarchiwizowanego pokoju czatu"
   }
 }

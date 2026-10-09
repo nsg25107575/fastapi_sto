@@ -11,6 +11,7 @@ from i18n.context import set_current_locale
 from i18n.dependency import get_locale
 from i18n.dependency_translator import t
 from routers.auth import router as auth_router
+from routers.chat import router as chat_router
 from routers.customer import router as customer_router
 from routers.order import router as order_router
 from routers.review import router as review_router
@@ -29,7 +30,7 @@ app.include_router(station_router)
 app.include_router(order_router)
 app.include_router(review_router)
 app.include_router(service_router)
-
+app.include_router(chat_router)
 
 # Lock down the interactive schema/docs endpoints outside local
 # development. Checked at REQUEST time (not import/startup time) against

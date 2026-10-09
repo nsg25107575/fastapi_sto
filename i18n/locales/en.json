@@ -45,5 +45,8 @@
   },
   "customer": {
     "not_found": "Customer not found"
+  },
+  "chat": {
+    "room_archived": "Cannot send messages to an archived chat room"
   }
 }

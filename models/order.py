@@ -14,7 +14,7 @@ from sqlalchemy.orm import Mapped, mapped_column, Session, relationship
 
 from database.engine import Base
 from models.chat_message import (ChatMessageModel, MessageType, SenderType)
-from models.chat_room import ChatRoomModel
+from models.chat_room import ChatRoomModel, ChatRoomStatus
 from models.customer import CustomerModel
 from models.station_service import StationServiceModel
 
@@ -153,8 +153,12 @@ class OrderModel(Base):
 
         chat_room = session.query(ChatRoomModel).filter_by(order_id=order_id).one()
 
+        if status in [OrderStatus.COMPLETED, OrderStatus.CANCELLED]:
+            chat_room.status = ChatRoomStatus.ARCHIVED
+
         if status == OrderStatus.CONFIRMED:
             body = "Order accepted"
+
         else:
             body = f"Status: {status.value}"
 

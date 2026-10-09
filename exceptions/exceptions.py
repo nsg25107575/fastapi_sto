@@ -157,3 +157,12 @@ def order_not_found(locale: str | None = None) -> HTTPException:
         detail=t("order.not_found", locale=locale),
         headers={"WWW-Authenticate": "Bearer"}
     )
+
+
+# --- Chat ------------------------------------------------------------------------
+def chat_room_archived_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_403_FORBIDDEN,
+        detail=t("chat.room_archived", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
