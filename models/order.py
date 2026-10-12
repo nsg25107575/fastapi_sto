@@ -20,15 +20,18 @@ from models.station_service import StationServiceModel
 
 
 class OrderStatus(str, enum.Enum):
-    """Lifecycle of a service order. Deliberately small -- a station
-    owner confirms or rejects, and either side may cancel; richer
-    workflow states (e.g. in-progress, completed) are a follow-up once
-    station-owner tooling for managing orders exists."""
+    """Lifecycle states of a service order"""
     PENDING = "pending"
     CONFIRMED = "confirmed"
+    IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     REJECTED = "rejected"
     CANCELLED = "cancelled"
+
+
+class CancelledBy(str, enum.Enum):
+    CUSTOMER = "customer"
+    STATION = "station"
 
 
 class OrderModel(Base):
@@ -55,10 +58,14 @@ class OrderModel(Base):
         # is not among the defined enum values" once the server default
         # actually got exercised (i.e. the very first INSERT).
         Enum(OrderStatus, native_enum=False, length=20, values_callable=lambda enum_cls: [e.value for e in enum_cls]),
-        nullable=False,
-        server_default=OrderStatus.PENDING.value,
+        nullable=False, server_default=OrderStatus.PENDING.value,
     )
 
+    cancelled_by: Mapped[CancelledBy | None] = mapped_column(
+        Enum(CancelledBy, native_enum=False, length=20, values_callable=lambda enum_cls: [e.value for e in enum_cls],
+             ),
+        nullable=True, default=None,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )

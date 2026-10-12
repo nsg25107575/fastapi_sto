@@ -270,3 +270,66 @@ def test_update_order_status_forbidden_for_non_owner(
     ).all()
 
     assert messages == []
+
+
+def test_update_order_status_accepts_in_progress(
+        auth_client, db_session, client
+):
+    station_id, service_id = _make_station_with_service(
+        auth_client, db_session
+    )
+    customer = _make_customer(client)
+
+    created = client.post(
+        "/orders/",
+        json={
+            "customer_id": customer["id"],
+            "station_id": station_id,
+            "station_service_id": service_id,
+        },
+    )
+    assert created.status_code == 201, created.text
+
+    response = auth_client[0].put(
+        f"/orders/{created.json()['id']}/status",
+        json={"status": "in_progress"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "in_progress"
+
+
+def test_update_order_status_accepts_completed(
+        auth_client, db_session, client
+):
+    station_id, service_id = _make_station_with_service(
+        auth_client, db_session
+    )
+    customer = _make_customer(client)
+
+    created = client.post(
+        "/orders/",
+        json={
+            "customer_id": customer["id"],
+            "station_id": station_id,
+            "station_service_id": service_id,
+        },
+    )
+    assert created.status_code == 201, created.text
+
+    response = auth_client[0].put(
+        f"/orders/{created.json()['id']}/status",
+        json={"status": "completed"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "completed"
+
+
+def test_update_order_status_rejects_invalid_status(auth_client):
+    response = auth_client[0].put(
+        "/orders/1/status",
+        json={"status": "invalid_status"},
+    )
+
+    assert response.status_code == 422
