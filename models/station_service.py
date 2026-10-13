@@ -1,14 +1,11 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 from sqlalchemy import String, DateTime, ForeignKey, Index, text, Numeric, select
 from sqlalchemy.orm import Mapped, mapped_column, relationship, Session
 
 from database.engine import Base
 from database.pagination import paginate
-
-if TYPE_CHECKING:
-    from models.station import StationModel
+from models.station import StationModel
 
 
 class StationServiceModel(Base):
@@ -62,51 +59,76 @@ class StationServiceModel(Base):
 
     @classmethod
     def add_service(cls, session: Session, station_id: int, name: str, price: float | None = None):
-        """
-        Add a new service to a station.
-        """
-        service = cls(
-            station_id=station_id,
-            name=name,
-            price=price
-        )
+        """Add a service and reset the parent station moderation status."""
+        station = session.get(StationModel, station_id)
+
+        if station is None:
+            return None
+
+        service = cls(station_id=station_id, name=name, price=price)
+
+        station.moderation_status = "pending"
 
         session.add(service)
-        session.commit()
+        session.flush()
         session.refresh(service)
 
         return service
 
     @classmethod
-    def update_service(cls, session: Session, service_id: int, name: str | None = None, price: float | None = None):
-        """
-        Update a service by its ID. Only provided fields will be updated.
-        """
+    def update_service(
+            cls,
+            session: Session,
+            service_id: int,
+            name: str | None = None,
+            price: float | None = None,
+    ):
+        """Update a service and reset moderation when its data changes."""
         service = session.get(cls, service_id)
+
         if service is None:
             return None
 
-        if name is not None:
-            service.name = name
-        if price is not None:
-            service.price = price
+        station = session.get(StationModel, service.station_id)
 
-        session.commit()
+        if station is None:
+            return None
+
+        changed = False
+
+        if name is not None and service.name != name:
+            service.name = name
+            changed = True
+
+        if price is not None and service.price != price:
+            service.price = price
+            changed = True
+
+        if changed:
+            station.moderation_status = "pending"
+
+        session.flush()
         session.refresh(service)
 
         return service
 
     @classmethod
     def delete_service(cls, session: Session, service_id: int):
-        """
-        Delete a service by its ID.
-        """
+        """Delete a service and reset the parent station moderation status."""
         service = session.get(cls, service_id)
+
         if service is None:
             return None
 
+        station = session.get(StationModel, service.station_id)
+
+        if station is None:
+            return None
+
+        station.moderation_status = "pending"
+
         session.delete(service)
-        session.commit()
+        session.flush()
 
         return service_id
 

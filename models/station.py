@@ -35,6 +35,8 @@ class StationModel(Base, SoftDeleteMixin):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     address: Mapped[str] = mapped_column(String(200), nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"))
+    moderation_status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending",
+                                                   server_default=text("'pending'"))
     latitude: Mapped[float | None] = mapped_column(Numeric(precision=16, scale=14), nullable=True)
     longitude: Mapped[float | None] = mapped_column(Numeric(precision=16, scale=14), nullable=True)
 

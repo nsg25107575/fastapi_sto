@@ -1,5 +1,7 @@
 """Tests for /services/* (per-station price list)."""
 
+from models.station import StationModel
+
 
 def _create_station(auth_client):
     client, user_payload = auth_client
@@ -9,6 +11,14 @@ def _create_station(auth_client):
     )
     assert response.status_code == 201
     return response.json()["id"]
+
+
+def _set_station_moderation_status(db_session, station_id: int, status: str):
+    station = db_session.get(StationModel, station_id)
+    assert station is not None
+
+    station.moderation_status = status
+    db_session.commit()
 
 
 def test_create_service_requires_auth(client):
@@ -29,7 +39,7 @@ def test_create_service_success(auth_client):
         params={"station_id": station_id, "name": "Oil change", "price": 20.0},
     )
 
-    assert response.status_code == 200, response.text
+    assert response.status_code == 201, response.text
     data = response.json()
     assert data["name"] == "Oil change"
     assert data["price"] == 20.0
@@ -219,3 +229,89 @@ def test_remove_service_returns_translated_not_found_message(auth_client):
     response = client.delete("/services/999999", headers={"accept-language": "uk"})
     assert response.status_code == 404
     assert response.json()["detail"] != "Service not found"
+
+
+def test_create_service_resets_station_moderation_to_pending(
+        auth_client, db_session
+):
+    client, _user = auth_client
+    station_id = _create_station(auth_client)
+
+    _set_station_moderation_status(db_session, station_id, "approved")
+
+    response = client.post(
+        "/services/",
+        params={
+            "station_id": station_id,
+            "name": "Oil change",
+            "price": 20.0,
+        },
+    )
+
+    assert response.status_code == 201, response.text
+
+    db_session.expire_all()
+    station = db_session.get(StationModel, station_id)
+
+    assert station.moderation_status == "pending"
+
+
+def test_edit_service_resets_station_moderation_to_pending(
+        auth_client, db_session
+):
+    client, _user = auth_client
+    station_id = _create_station(auth_client)
+
+    created = client.post(
+        "/services/",
+        params={
+            "station_id": station_id,
+            "name": "Brake check",
+            "price": 30.0,
+        },
+    )
+    assert created.status_code == 201, created.text
+    service_id = created.json()["id"]
+
+    _set_station_moderation_status(db_session, station_id, "approved")
+
+    response = client.put(
+        f"/services/{service_id}",
+        params={"price": 35.0},
+    )
+
+    assert response.status_code == 200, response.text
+
+    db_session.expire_all()
+    station = db_session.get(StationModel, station_id)
+
+    assert station.moderation_status == "pending"
+
+
+def test_delete_service_resets_station_moderation_to_pending(
+        auth_client, db_session
+):
+    client, _user = auth_client
+    station_id = _create_station(auth_client)
+
+    created = client.post(
+        "/services/",
+        params={
+            "station_id": station_id,
+            "name": "Car wash",
+            "price": 15.0,
+        },
+    )
+    assert created.status_code == 201, created.text
+    service_id = created.json()["id"]
+
+    _set_station_moderation_status(db_session, station_id, "approved")
+
+    response = client.delete(f"/services/{service_id}")
+
+    assert response.status_code == 200, response.text
+
+    db_session.expire_all()
+    station = db_session.get(StationModel, station_id)
+
+    assert station.moderation_status == "pending"

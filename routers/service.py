@@ -1,49 +1,90 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from auth.authorization import check_station_ownership
 from auth.dependencies import get_current_user
 from database.engine import get_session
-from exceptions.exceptions import service_not_found_exception
+from exceptions.exceptions import (
+    service_not_found_exception,
+    station_not_found_exception,
+)
+from models.station import StationModel
 from models.station_service import StationServiceModel
+from models.user import UserModel
 from validations.pagination import PaginatedResponse, PaginationParams
 
 router = APIRouter(
     prefix="/services",
-    tags=["Services"]
+    tags=["Services"],
 )
 
 
-@router.post("/", dependencies=[Depends(get_current_user)])
-def create_service(station_id: int, name: str, price: float | None = None, session: Session = Depends(get_session)):
-    """
-    Create a new service for a station
-    """
-    return StationServiceModel.add_service(
-        session=session,
-        station_id=station_id,
-        name=name,
-        price=price
-    )
+@router.post("/", status_code=201)
+def create_service(
+        station_id: int,
+        name: str,
+        price: float | None = None,
+        current_user: UserModel = Depends(get_current_user),
+        session: Session = Depends(get_session),
+):
+    """Create a service for a station owned by the current user."""
+    try:
+        station = StationModel.read_station(session, station_id)
+
+        if station is None:
+            raise station_not_found_exception()
+
+        check_station_ownership(station, current_user)
+
+        service = StationServiceModel.add_service(
+            session=session,
+            station_id=station_id,
+            name=name,
+            price=price,
+        )
+
+        if service is None:
+            raise station_not_found_exception()
+
+        session.commit()
+        session.refresh(service)
+
+        return service
+
+    except Exception:
+        session.rollback()
+        raise
 
 
 @router.get("/", response_model=PaginatedResponse[str])
-def read_services(pagination: PaginationParams = Depends(), session: Session = Depends(get_session)):
-    """
-    Get a list of all unique services
-    """
-    items, total = StationServiceModel.get_services(session, pagination.offset, pagination.limit)
+def read_services(
+        pagination: PaginationParams = Depends(),
+        session: Session = Depends(get_session),
+):
+    """Get a paginated list of unique service names."""
+    items, total = StationServiceModel.get_services(
+        session,
+        pagination.offset,
+        pagination.limit,
+    )
 
-    return PaginatedResponse(items=items, total=total, limit=pagination.limit, offset=pagination.offset)
+    return PaginatedResponse(
+        items=items,
+        total=total,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
 
 
 @router.get("/{service_id}")
-def read_service(service_id: int, session: Session = Depends(get_session)):
-    """
-    Get a service by its ID
-    """
+def read_service(
+        service_id: int,
+        session: Session = Depends(get_session),
+):
+    """Get a service by its ID."""
     service = StationServiceModel.get_service(
         session=session,
-        service_id=service_id
+        service_id=service_id,
     )
 
     if service is None:
@@ -52,40 +93,86 @@ def read_service(service_id: int, session: Session = Depends(get_session)):
     return service
 
 
-@router.put("/{service_id}", dependencies=[Depends(get_current_user)])
+@router.put("/{service_id}")
 def edit_service(
         service_id: int,
         name: str | None = None,
         price: float | None = None,
-        session: Session = Depends(get_session)
+        current_user: UserModel = Depends(get_current_user),
+        session: Session = Depends(get_session),
 ):
-    """
-    Edit an existing service
-    """
-    service = StationServiceModel.update_service(
-        session=session,
-        service_id=service_id,
-        name=name,
-        price=price
-    )
+    """Edit a service belonging to a station owned by the current user."""
+    try:
+        service = StationServiceModel.get_service(
+            session=session,
+            service_id=service_id,
+        )
 
-    if service is None:
-        raise service_not_found_exception()
+        if service is None:
+            raise service_not_found_exception()
 
-    return service
+        station = StationModel.read_station(session, service.station_id)
+
+        if station is None:
+            raise station_not_found_exception()
+
+        check_station_ownership(station, current_user)
+
+        service = StationServiceModel.update_service(
+            session=session,
+            service_id=service_id,
+            name=name,
+            price=price,
+        )
+
+        if service is None:
+            raise service_not_found_exception()
+
+        session.commit()
+        session.refresh(service)
+
+        return service
+
+    except Exception:
+        session.rollback()
+        raise
 
 
-@router.delete("/{service_id}", dependencies=[Depends(get_current_user)])
-def remove_service(service_id: int, session: Session = Depends(get_session)):
-    """
-    Remove a service by its ID
-    """
-    service = StationServiceModel.delete_service(
-        session=session,
-        service_id=service_id
-    )
+@router.delete("/{service_id}")
+def remove_service(
+        service_id: int,
+        current_user: UserModel = Depends(get_current_user),
+        session: Session = Depends(get_session),
+):
+    """Delete a service belonging to a station owned by the current user."""
+    try:
+        service = StationServiceModel.get_service(
+            session=session,
+            service_id=service_id,
+        )
 
-    if service is None:
-        raise service_not_found_exception()
+        if service is None:
+            raise service_not_found_exception()
 
-    return service
+        station = StationModel.read_station(session, service.station_id)
+
+        if station is None:
+            raise station_not_found_exception()
+
+        check_station_ownership(station, current_user)
+
+        deleted_service_id = StationServiceModel.delete_service(
+            session=session,
+            service_id=service_id,
+        )
+
+        if deleted_service_id is None:
+            raise service_not_found_exception()
+
+        session.commit()
+
+        return deleted_service_id
+
+    except Exception:
+        session.rollback()
+        raise
