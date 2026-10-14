@@ -1,7 +1,7 @@
 import os
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session, with_loader_criteria
 
 from config import Config
 
@@ -57,3 +57,23 @@ def get_session():
         yield session
     finally:
         session.close()
+
+
+@event.listens_for(Session, "do_orm_execute")
+def _filter_soft_deleted(execute_state):
+    """Hide soft-deleted records from ORM SELECT queries by default."""
+    if (
+            execute_state.is_select
+            and not execute_state.is_column_load
+            and not execute_state.is_relationship_load
+            and not execute_state.execution_options.get("include_deleted", False)
+    ):
+        from models.mixin import SoftDeleteMixin
+
+        execute_state.statement = execute_state.statement.options(
+            with_loader_criteria(
+                SoftDeleteMixin,
+                lambda model: model.deleted_at.is_(None),
+                include_aliases=True,
+            )
+        )

@@ -1,7 +1,7 @@
 """Unit tests for StationModel — direct model-level coverage
 complementing the router-level tests in test_stations.py.
 """
-from models.station import StationModel
+from models.station import ModerationStatus, StationModel
 from models.user import UserModel
 
 
@@ -107,12 +107,15 @@ def test_read_nearest_stations_orders_by_distance(db_session):
     )
     kyiv.latitude = 50.4501
     kyiv.longitude = 30.5234
+    kyiv.moderation_status = ModerationStatus.APPROVED
 
     sydney = StationModel.create_station(
         session=db_session, user_id=user.id, name="Sydney STO", address="Sydney St"
     )
     sydney.latitude = -33.8688
     sydney.longitude = 151.2093
+    sydney.moderation_status = ModerationStatus.APPROVED
+
     db_session.commit()
 
     results = StationModel.read_nearest_stations(

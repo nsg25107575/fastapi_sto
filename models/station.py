@@ -1,11 +1,13 @@
+import enum
 from datetime import datetime
 from math import radians
-from typing import Self
+from typing import Self, Optional
 from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import String, Boolean, DateTime, Index, UniqueConstraint, text, select, event, func, case, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, Session, with_loader_criteria, selectinload, relationship
+from sqlalchemy import String, Boolean, DateTime, Index, UniqueConstraint, text, select, func, case, ForeignKey, \
+    Enum
+from sqlalchemy.orm import Mapped, mapped_column, Session, selectinload, relationship
 from sqlalchemy.sql.sqltypes import Numeric, Integer
 
 from config import Config
@@ -16,6 +18,13 @@ from models.mixin import SoftDeleteMixin
 if TYPE_CHECKING:
     from models.station_service import StationServiceModel
     from models.user import UserModel
+
+
+class ModerationStatus(str, enum.Enum):
+    """Enum for station moderation statuses."""
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
 
 
 class StationModel(Base, SoftDeleteMixin):
@@ -35,8 +44,21 @@ class StationModel(Base, SoftDeleteMixin):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     address: Mapped[str] = mapped_column(String(200), nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"))
-    moderation_status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending",
-                                                   server_default=text("'pending'"))
+
+    moderation_status: Mapped[ModerationStatus] = mapped_column(
+        Enum(ModerationStatus, native_enum=False, length=20,
+             values_callable=lambda enum_cls: [member.value for member in enum_cls]),
+        nullable=False,
+        default=ModerationStatus.PENDING,
+        server_default=text("'pending'"),
+    )
+
+    rejection_reason: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        nullable=True,
+        default=None,
+    )
+
     latitude: Mapped[float | None] = mapped_column(Numeric(precision=16, scale=14), nullable=True)
     longitude: Mapped[float | None] = mapped_column(Numeric(precision=16, scale=14), nullable=True)
 
@@ -71,13 +93,12 @@ class StationModel(Base, SoftDeleteMixin):
     def search_stations_by_name(cls, session: Session, search_query: str, limit: int = 20):
         """
         Fast full-text search for stations by name.
-        Returns only active service stations that have not been soft-deleted.
+        Returns only active, approved service stations that have not been soft-deleted.
         """
         if not search_query or len(search_query.strip()) < 3:
             return []
 
         # Constructing a query for Boolean Mode.
-        # Adding '*' allows searching by the beginning of a word (e.g., 'Auto*' will find 'Autoservice', 'Autotech').
         formatted_query = f"{search_query.strip()}*"
 
         # Constructing the SQL expression MATCH(name) AGAINST(:query IN BOOLEAN MODE)
@@ -87,7 +108,8 @@ class StationModel(Base, SoftDeleteMixin):
             select(cls)
             .where(
                 match_expr,
-                cls.active.is_(True)
+                cls.active.is_(True),
+                cls.moderation_status == ModerationStatus.APPROVED  # Додано фільтрацію
             )
             .limit(limit)
         )
@@ -125,9 +147,9 @@ class StationModel(Base, SoftDeleteMixin):
     def read_nearest_stations(
             cls, session: Session, lat: float, lng: float,
             limit: int = Config.app_nearest_stations_limit
-    ) -> list[Self]:
+    ) -> list[dict]:
         """
-        Returns the nearest active stations along with their services and
+        Returns the nearest active approved stations along with their services and
         on-the-fly aggregated review rating/count.
         """
         # 1. Convert user coordinates to radians for SQL
@@ -155,7 +177,6 @@ class StationModel(Base, SoftDeleteMixin):
         ).label("distance_km")
 
         # 3. Aggregate reviews separately.
-        # This keeps review-specific logic out of StationModel.
         from models.review import ReviewModel
 
         reviews_aggregation = (
@@ -182,7 +203,8 @@ class StationModel(Base, SoftDeleteMixin):
             .where(
                 cls.latitude.is_not(None),
                 cls.longitude.is_not(None),
-                cls.active.is_(True)
+                cls.active.is_(True),
+                cls.moderation_status == ModerationStatus.APPROVED  # Додано перевірку статусу схвалення
             )
             .options(selectinload(cls.services))
             .order_by(text("distance_km"))
@@ -255,34 +277,16 @@ class StationModel(Base, SoftDeleteMixin):
 
     @classmethod
     def restore_station(cls, session: Session, station_id: int) -> Self | None:
-        """
-        Restore the station with the given ID.
-        """
-        # Must bypass the global soft-delete filter — otherwise a
-        # soft-deleted station (deleted_at IS NOT NULL) is invisible to
-        # read_station() and can never be found to restore.
-        stmt = select(cls).where(cls.id == station_id).execution_options(include_deleted=True)
+        """Restore the station with the given ID."""
+        stmt = (
+            select(cls)
+            .where(cls.id == station_id)
+            .execution_options(include_deleted=True)
+        )
         station = session.scalars(stmt).first()
 
         if station is not None:
             station.deleted_at = None
             session.flush()
+
         return station
-
-
-# Global Request Interceptor (Event Listener)
-@event.listens_for(Session, "do_orm_execute")
-def _add_soft_delete_filter(execute_state):
-    # Allows disabling the filter using .execution_options(include_deleted=True)
-    if execute_state.execution_options.get("include_deleted", False):
-        return
-    # Filtering SELECT queries: showing only those where deleted_at IS NULL
-    if execute_state.is_select:
-        execute_state.statement = execute_state.statement.options(
-            with_loader_criteria(
-                SoftDeleteMixin,
-                lambda cls: cls.deleted_at.is_(None),
-                include_aliases=True,
-                propagate_to_loaders=True
-            )
-        )

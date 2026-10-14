@@ -2,10 +2,10 @@
 
 import pytest
 
-from models import StationModel
 from models.customer import CustomerModel
 from models.order import OrderModel, OrderStatus
 from models.review import ReviewModel
+from models.station import ModerationStatus, StationModel
 from models.station_service import StationServiceModel
 
 
@@ -319,6 +319,7 @@ def test_get_nearest_stations_filters_by_coordinates(auth_client, db_session):
     )
     near.latitude = 50.4501
     near.longitude = 30.5234
+    near.moderation_status = ModerationStatus.APPROVED
 
     far = StationModel.create_station(
         session=db_session,
@@ -328,6 +329,7 @@ def test_get_nearest_stations_filters_by_coordinates(auth_client, db_session):
     )
     far.latitude = -33.8688
     far.longitude = 151.2093
+    far.moderation_status = ModerationStatus.APPROVED
     db_session.commit()
 
     response = client.request(
@@ -373,6 +375,9 @@ def test_get_nearest_stations_returns_aggregated_rating(
         name="Oil change",
         price=250.0,
     )
+    db_session.commit()
+
+    station.moderation_status = ModerationStatus.APPROVED
     db_session.commit()
 
     customer_1 = CustomerModel(
