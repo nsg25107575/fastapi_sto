@@ -50,5 +50,8 @@
   },
   "chat": {
     "room_archived": "Cannot send messages to an archived chat room"
+  },
+  "station_contact": {
+    "not_found": "Station contact not found"
   }
 }

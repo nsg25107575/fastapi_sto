@@ -1,11 +1,7 @@
 """
-`exceptions` package.
-
-Re-exports the shared HTTPException instances from
-`exceptions/exceptions.py` so existing imports across the codebase
-(`from exceptions import StationNotFoundException`, etc.) keep working
-unchanged after the `exceptions.py` -> `exceptions/` module refactor.
+Re-exports shared HTTPException helpers from exceptions.py.
 """
+
 from exceptions.exceptions import (
     station_not_found_exception,
     invalid_coordinate_exception,
@@ -15,6 +11,7 @@ from exceptions.exceptions import (
     order_not_found_exception,
     invalid_order_service_exception,
     geocoding_failed_exception,
+    station_contact_not_found_exception,
 )
 
 __all__ = [
@@ -26,4 +23,5 @@ __all__ = [
     "order_not_found_exception",
     "invalid_order_service_exception",
     "geocoding_failed_exception",
+    "station_contact_not_found_exception",
 ]

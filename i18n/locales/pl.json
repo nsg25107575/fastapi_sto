@@ -50,5 +50,8 @@
   },
   "chat": {
     "room_archived": "Nie można wysyłać wiadomości do zarchiwizowanego pokoju czatu"
+  },
+  "station_contact": {
+    "not_found": "Nie znaleziono kontaktu stacji"
   }
 }
