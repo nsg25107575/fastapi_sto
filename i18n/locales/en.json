@@ -12,6 +12,7 @@
     "name_invalid_chars": "Only letters, spaces, hyphens, and apostrophes are allowed. Numbers and special characters are prohibited."
   },
   "station": {
+    "admin_forbidden": "Administrator privileges are required for this action",
     "not_found": "Station not found",
     "forbidden": "You do not have permission to access this station",
     "invalid_coordinates": "Invalid coordinates",

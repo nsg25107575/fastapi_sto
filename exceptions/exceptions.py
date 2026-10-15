@@ -175,3 +175,11 @@ def station_forbidden_exception(locale: str | None = None) -> HTTPException:
         detail=t("station.forbidden", locale=locale),
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+def admin_forbidden_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_403_FORBIDDEN,
+        detail=t("station.admin_forbidden", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )

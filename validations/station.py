@@ -1,5 +1,6 @@
-from pydantic import BaseModel, ConfigDict
+from typing import Literal
 
+from pydantic import BaseModel, ConfigDict
 from validations.service import ServiceResponseSchema
 
 
@@ -40,3 +41,20 @@ class NearestStationResponseSchema(BaseModel):
     rating: float | None = None
     reviews_count: int = 0
     services: list[ServiceResponseSchema] = []
+
+
+class StationModerationSchema(BaseModel):
+    """Schema for station moderation requests."""
+
+    moderation_status: Literal["approved", "rejected"]
+    rejection_reason: str | None = None
+
+
+class StationModerationResponseSchema(BaseModel):
+    """Schema for station moderation responses."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    moderation_status: str
+    rejection_reason: str | None = None

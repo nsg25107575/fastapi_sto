@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, String, select, text
+from sqlalchemy import Boolean, DateTime, String, select, text
 from sqlalchemy.orm import Mapped, mapped_column, Session, relationship
 
 from auth.password import get_password_hash
@@ -19,11 +19,11 @@ class UserModel(Base):
 
     # Use `DateTime(timezone=True)` to synchronize with the application's server time.
     email_verified: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-
     first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     second_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     password: Mapped[str] = mapped_column(String(256), nullable=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")

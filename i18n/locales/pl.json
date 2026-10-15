@@ -12,6 +12,7 @@
     "name_invalid_chars": "Dozwolone są tylko litery, spacje, myślniki i cudzysłowy. Liczby i znaki specjalne są zabronione."
   },
   "station": {
+    "admin_forbidden": "Do wykonania tej czynności wymagane są uprawnienia administratora",
     "not_found": "Nie znaleziono stacji",
     "forbidden": "Nie masz uprawnień do tej stacji",
     "invalid_coordinates": "Nieprawidłowe współrzędne",
