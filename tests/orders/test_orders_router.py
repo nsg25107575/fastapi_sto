@@ -7,6 +7,8 @@
 
 from sqlalchemy import select
 
+from config import Config
+from i18n.dependency_translator import t
 from models.chat_message import ChatMessageModel, MessageType, SenderType
 from models.chat_room import ChatRoomModel
 
@@ -206,7 +208,15 @@ def test_update_order_status_success(auth_client, db_session):
     assert message.message_type == MessageType.SYSTEM
     assert message.sender_type == SenderType.SYSTEM
     assert message.sender_id is None
-    assert message.body == "Order accepted"
+    expected_messages = {
+        t(
+            "order.status_updated",
+            locale=locale["abbr"],
+            status=t("order.confirmed", locale=locale["abbr"]),
+        )
+        for locale in Config.app_sup_locales
+    }
+    assert message.body in expected_messages
 
 
 def test_update_order_status_not_found(auth_client):
