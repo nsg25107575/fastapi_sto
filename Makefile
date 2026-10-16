@@ -6,7 +6,7 @@
 
 .PHONY: \
   migrate migrate-up-index migrate-down-index migrate-up migrate-down \
-  build up up-build down restart logs ps \
+  build up up-build down restart logs ps shell shell-db \
   _ensure_uv deps-update deps-update-package deps-outdated \
   test test-smoke test-verbose test-cov test-cov-html test-file
 
@@ -61,6 +61,12 @@ logs:
 ## Show status of the stack's containers
 ps:
 	$(DC) ps
+## Open an interactive shell in the running api container
+shell:
+	$(DC) exec api /bin/sh
+## Open the MariaDB console in the running db container
+shell-db:
+	$(DC) exec db sh -c 'exec mariadb --user="$$MARIADB_USER" --password="$$MARIADB_PASSWORD" "$$MARIADB_DATABASE"'
 
 # ───────────────────────────────────────────────────────────────────────────
 # Dependencies — keep requirements.txt in sync with pyproject.toml
@@ -140,4 +146,3 @@ migrate-up:
 ## Downgrade all migration
 migrate-down:
 	$(DC) exec api python -m alembic downgrade base
-
