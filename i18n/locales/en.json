@@ -19,7 +19,8 @@
     "duplicate": "Station with this name and address already exists"
   },
   "service": {
-    "not_found": "Service not found"
+    "not_found": "Service not found",
+    "service_id_doesnt_belong_to_station": "The station_service_id does not belong to the given station_id"
   },
   "auth": {
     "email_already_in_use": "Email already in use",
@@ -30,8 +31,16 @@
     "user_info_retrieved": "User info retrieved successfully"
   },
   "order": {
+    "pending": "pending",
+    "confirmed": "confirmed",
+    "in_progress": "in progress",
+    "completed": "completed",
+    "rejected": "rejected",
+    "cancelled": "cancelled",
+    "status_updated": "Order {status}",
     "not_found": "Order not found",
-    "invalid_service": "The specified service does not belong to the specified station"
+    "invalid_service": "The specified service does not belong to the specified station",
+    "customer_id_doesnt_refer_to_customer": "The customer_id does not refer to an existing customer"
   },
   "geocoding": {
     "failed": "Could not resolve coordinates for the given address"

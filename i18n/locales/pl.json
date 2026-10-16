@@ -19,7 +19,8 @@
     "duplicate": "Stacja o tej nazwie i adresie już istnieje"
   },
   "service": {
-    "not_found": "Usługa nie znaleziona"
+    "not_found": "Usługa nie znaleziona",
+    "service_id_doesnt_belong_to_station": "Identyfikator station_service_id nie należy do podanego identyfikatora station_id"
   },
   "auth": {
     "email_already_in_use": "Adres e-mail jest już używany",
@@ -30,8 +31,16 @@
     "user_info_retrieved": "Informacje o użytkowniku zostały pomyślnie pobrane"
   },
   "order": {
+    "pending": "oczekujące",
+    "confirmed": "potwierdzone",
+    "in_progress": "w trakcie realizacji",
+    "completed": "zrealizowane",
+    "rejected": "odrzucone",
+    "cancelled": "anulowane",
+    "status_updated": "Zamówienie {status}",
     "not_found": "Zamówienie nie znalezione",
-    "invalid_service": "Określona usługa nie należy do określonej stacji"
+    "invalid_service": "Określona usługa nie należy do określonej stacji",
+    "customer_id_doesnt_refer_to_customer": "Identyfikator customer_id nie odnosi się do istniejącego klienta"
   },
   "geocoding": {
     "failed": "Nie udało się zrozumieć współrzędnych dla podanego adresu"

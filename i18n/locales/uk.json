@@ -12,7 +12,8 @@
     "name_invalid_chars": "Допускаються лише літери, пробіли, дефіси та апострофи. Числа та спеціальні символи заборонені."
   },
   "service": {
-    "not_found": "Послуга не знайдена"
+    "not_found": "Послуга не знайдена",
+    "service_id_doesnt_belong_to_station": "Ідентифікатор station_service_id не належить до вказаного ідентифікатора station_id"
   },
   "auth": {
     "email_already_in_use": "Ця електронна адреса вже використовується.",
@@ -23,8 +24,16 @@
     "user_info_retrieved": "Інформація про користувача отримана успішно"
   },
   "order": {
+    "pending": "очікує",
+    "confirmed": "підтверджено",
+    "in_progress": "в обробці",
+    "completed": "виконано",
+    "rejected": "відхилено",
+    "cancelled": "скасовано",
+    "status_updated": "Замовлення {status}",
     "not_found": "Замовлення не знайдено",
-    "invalid_service": "Вказана послуга не належить до вказаної станції"
+    "invalid_service": "Вказана послуга не належить до вказаної станції",
+    "customer_id_doesnt_refer_to_customer": "customer_id не відноситься до існуючого клієнта"
   },
   "geocoding": {
     "failed": "Не вдалося визначити координати для заданої адреси"
