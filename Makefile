@@ -49,9 +49,9 @@ up:
 ## Rebuild the api image and start all services in the background
 up-build:
 	$(DC) up -d --build
-## Stop and remove all services
+## Stop and remove all services (usage: make down args="-v" to also remove volumes)
 down:
-	$(DC) down
+	$(DC) down $(args)
 ## Restart all services (without rebuilding)
 restart:
 	$(DC) restart
@@ -136,7 +136,7 @@ migrate:
 	$(DC) exec api python -m alembic revision --autogenerate -m "$(msg)"
 ## Create an empty migration revision (usage: make migrate-create msg="describe the schema change")
 migrate-create:
-	$(DC) exec api python -m alembic revision -m "$(msg)"
+	$(DC) exec --user "$(shell id -u):$(shell id -g)" api python -m alembic revision -m "$(msg)"
 ## Upgrade migration by index (usage: make migrate-up-index index="1")
 migrate-up-index:
 	$(DC) exec api python -m alembic upgrade $(index)
