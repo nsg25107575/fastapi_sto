@@ -3,16 +3,16 @@ Tests for user validation logic.
 """
 import pytest
 
-from i18n.context import set_current_locale
+from i18n.context import reset_current_locale, set_current_locale
 from validations.user import _validate_password_strength, _validate_name_field
 
 
 @pytest.fixture(autouse=True)
 def _reset_locale():
-    """Ensure contextvar locale doesn't leak between tests."""
-    set_current_locale("en")
+    """Restore the current locale after tests that change it."""
+    token = set_current_locale("en")
     yield
-    set_current_locale("en")
+    reset_current_locale(token)
 
 
 # --- Unit tests on the shared validator functions directly -----------------
