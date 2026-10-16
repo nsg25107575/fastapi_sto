@@ -33,10 +33,10 @@ services:
       UVICORN_KEEPALIVE: ${UVICORN_KEEPALIVE:-"5"}
       # Per-worker SQLAlchemy pool; total DB connections used by this
       # service scales as UVICORN_WORKERS * (DB_POOL_SIZE + DB_POOL_MAX_OVERFLOW).
-      DB_POOL_SIZE: ${DB_POOL_SIZE:-"10"}
-      DB_POOL_MAX_OVERFLOW: ${DB_POOL_MAX_OVERFLOW:-"20"}
-      DB_POOL_TIMEOUT: ${DB_POOL_TIMEOUT:-"30"}
-      DB_POOL_RECYCLE: ${DB_POOL_RECYCLE:-"1800"}
+      DB_POOL_SIZE: "${DB_POOL_SIZE:-10}"
+      DB_POOL_MAX_OVERFLOW: "${DB_POOL_MAX_OVERFLOW:-20}"
+      DB_POOL_TIMEOUT: "${DB_POOL_TIMEOUT:-30}"
+      DB_POOL_RECYCLE: "${DB_POOL_RECYCLE:-1800}"
     ports:
       - "${APP_PORT:-8333}:${APP_PORT:-8333}"
     depends_on:
