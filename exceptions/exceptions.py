@@ -177,6 +177,17 @@ def station_forbidden_exception(locale: str | None = None) -> HTTPException:
     )
 
 
+# --- Station contact -------------------------------------------------------------
+def station_contact_not_found_exception(
+        locale: str | None = None,
+) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_404_NOT_FOUND,
+        detail=t("station_contact.not_found", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
 def admin_forbidden_exception(locale: str | None = None) -> HTTPException:
     return HTTPException(
         status_code=HTTP_403_FORBIDDEN,
