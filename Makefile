@@ -1,11 +1,12 @@
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                          Station AI — Makefile                               ║
-# ║  Groups: API · Alembic                                                       ║
+# ║  Groups: API · Alembic · Seeders                                             ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 .PHONY: \
   migrate migrate-create migrate-up-index migrate-down-index migrate-up migrate-down \
+  seed seeder-create seeder-list seeder-run seeder-run-all \
   build up up-build down restart logs ps shell shell-db \
   _ensure_uv deps-update deps-update-package deps-outdated \
   test test-smoke test-verbose test-cov test-cov-html test-file
@@ -149,3 +150,24 @@ migrate-up:
 ## Downgrade all migration
 migrate-down:
 	$(DC) exec api python -m alembic downgrade base
+
+# ───────────────────────────────────────────────────────────────────────────
+# Seeders — run INSIDE the `api` container
+# ───────────────────────────────────────────────────────────────────────────
+## Seed lookup data (usage: make seed [seeder=station_roles|fuel_types])
+seed:
+	$(DC) exec api python -m seeders $(if $(seeder),--seeder $(seeder),)
+## Create a seeder class (usage: make seeder-create name=ExampleSeeder)
+seeder-create:
+	$(if $(name),,$(error Usage: make seeder-create name=ExampleSeeder))
+	$(DC) exec api python -m seeders.create $(name)
+## List available seeders
+seeder-list:
+	$(DC) exec api python -m seeders --list
+## Run one seeder (usage: make seeder-run seeder=station_roles)
+seeder-run:
+	$(if $(seeder),,$(error Usage: make seeder-run seeder=station_roles))
+	$(DC) exec api python -m seeders --seeder $(seeder)
+## Run all seeders
+seeder-run-all:
+	$(DC) exec api python -m seeders

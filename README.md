@@ -65,9 +65,9 @@ cp .env.example .env   # fill in real secrets
 make up-build          # build images and start the stack
 ```
 
-Database migrations are applied **automatically** on container startup (see
-`docker/api/entrypoint.sh`) — no separate `make migrate-up` step is needed
-when running via Docker.
+Database migrations and lookup-data seeding run **automatically** on container
+startup (see `docker/api/entrypoint.sh`) — no separate `make migrate-up` or
+`make seed` step is needed when running via Docker.
 
 > **Database ports:** keep `DB_PORT=3306` (the port MariaDB listens on
 > *inside* the Docker network, used by the API). To change the port exposed

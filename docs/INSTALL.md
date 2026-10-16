@@ -87,12 +87,19 @@ docker compose -f docker/api/docker-compose.yml --project-directory . up -d --bu
 
 Migrations are applied **automatically** by `docker/api/entrypoint.sh` every
 time the `api` container starts (it waits for the database, runs
-`alembic upgrade head`, then starts Uvicorn) — no manual migration step is
-required for the Docker workflow. If you need to apply migrations without
-restarting the API (e.g. in CI), you can still run:
+`alembic upgrade head`, seeds lookup data, then starts Uvicorn) — no manual
+migration or seeding step is required for the Docker workflow. If you need to
+apply migrations without restarting the API (e.g. in CI), you can still run:
 
 ```bash
 make migrate-up
+```
+
+Seed the initial lookup data after the migrations when running natively (the
+Docker entrypoint seeds automatically):
+
+```bash
+make seed
 ```
 
 Check that everything is running:
