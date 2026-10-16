@@ -7,8 +7,8 @@ Create Date: 2026-09-03 18:12:47.865115
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '0e2859d3a373'
@@ -28,6 +28,7 @@ def upgrade() -> None:
         sa.Column('second_name', sa.String(length=50), nullable=True),
         sa.Column('last_name', sa.String(length=50), nullable=True),
         sa.Column('password', sa.String(length=256), nullable=False),
+        sa.Column("is_admin", sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
         sa.Column('updated_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
         sa.Column('deleted_at', sa.DateTime(), server_default=sa.text('NULL'), nullable=True),
