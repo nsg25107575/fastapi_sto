@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import String, Boolean, DateTime, Index, UniqueConstraint, text, select, func, case, ForeignKey, \
-    Enum
+    Enum, Text
 from sqlalchemy.orm import Mapped, mapped_column, Session, selectinload, relationship
 from sqlalchemy.sql.sqltypes import Numeric, Integer
 
@@ -48,16 +48,10 @@ class StationModel(Base, SoftDeleteMixin):
     moderation_status: Mapped[ModerationStatus] = mapped_column(
         Enum(ModerationStatus, native_enum=False, length=20,
              values_callable=lambda enum_cls: [member.value for member in enum_cls]),
-        nullable=False,
-        default=ModerationStatus.PENDING,
-        server_default=text("'pending'"),
+        nullable=False, server_default=ModerationStatus.PENDING,
     )
 
-    rejection_reason: Mapped[Optional[str]] = mapped_column(
-        String(255),
-        nullable=True,
-        default=None,
-    )
+    rejection_reason: Mapped[Optional[str]] = mapped_column(Text(), nullable=True, default=None)
 
     latitude: Mapped[float | None] = mapped_column(Numeric(precision=16, scale=14), nullable=True)
     longitude: Mapped[float | None] = mapped_column(Numeric(precision=16, scale=14), nullable=True)
@@ -74,6 +68,7 @@ class StationModel(Base, SoftDeleteMixin):
         UniqueConstraint("name", "address", name="uq_station_name_per_address"),
         Index("idx_station_address", "address"),
         Index("idx_station_latitude_longitude", "latitude", "longitude"),
+        Index("idx_station_moderation_status", "moderation_status"),
         # Full-text index for fast search by title
         Index("idx_station_name_fulltext", "name", mariadb_prefix="FULLTEXT")
     )
