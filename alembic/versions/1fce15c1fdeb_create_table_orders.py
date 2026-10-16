@@ -26,7 +26,6 @@ def upgrade() -> None:
         sa.Column("station_id", sa.Integer(), nullable=False),
         sa.Column("station_service_id", sa.Integer(), nullable=False),
         sa.Column("status", sa.String(length=20), server_default="pending", nullable=False),
-        sa.Column("cancelled_by", sa.Enum("customer", "station", native_enum=False, length=20, ), nullable=True, ),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"),
                   nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"),
@@ -41,7 +40,6 @@ def upgrade() -> None:
     op.create_index("idx_order_station_id", "orders", ["station_id"], unique=False, if_not_exists=True)
     op.create_index("idx_order_customer_id", "orders", ["customer_id"], unique=False, if_not_exists=True)
     op.create_index("idx_order_status", "orders", ["status"], unique=False, if_not_exists=True)
-    op.create_index("idx_order_cancelled_by", "orders", ["cancelled_by"], unique=False, if_not_exists=True)
 
 
 def downgrade() -> None:
@@ -52,5 +50,4 @@ def downgrade() -> None:
     op.drop_index("idx_order_customer_id", table_name="orders", if_exists=True)
     op.drop_index("idx_order_station_id", table_name="orders", if_exists=True)
     op.drop_index("idx_order_status", table_name="orders", if_exists=True)
-    op.drop_index("idx_order_cancelled_by", table_name="orders", if_exists=True)
     op.drop_table("orders")
