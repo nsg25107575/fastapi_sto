@@ -120,10 +120,9 @@ class OrderModel(Base):
         service does not belong to the given station -- ordering a
         service from a different station than the one the customer
         picked (e.g. by sending mismatched ids) is a client error, not
-        something that should silently create inconsistent data. Also
-        raises ValueError if the customer does not exist, mapped to the
-        same 400 response as the station/service mismatch rather than a
-        raw IntegrityError from the FK constraint.
+        something that should silently create inconsistent data. Missing
+        customers and mismatched services raise HTTP 400 exceptions rather
+        than raw integrity errors from the foreign-key constraints.
         """
         # Validate that the customer exists and that the service belongs to the station.
         if session.get(CustomerModel, customer_id) is None:
@@ -141,6 +140,9 @@ class OrderModel(Base):
             station_service_id=station_service_id,
         )
         session.add(order)
+        session.flush()
+
+        session.add(ChatRoomModel(order_id=order.id))
         session.flush()
 
         return order
