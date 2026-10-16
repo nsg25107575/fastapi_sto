@@ -1,3 +1,4 @@
+import pytest
 from fastapi import HTTPException
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_400_BAD_REQUEST, HTTP_409_CONFLICT, HTTP_401_UNAUTHORIZED
 
@@ -11,6 +12,14 @@ from exceptions.exceptions import (
     invalid_order_service_exception,
     geocoding_failed_exception,
 )
+from i18n.context import reset_current_locale, set_current_locale
+
+
+@pytest.fixture(autouse=True)
+def restore_locale():
+    token = set_current_locale("en")
+    yield
+    reset_current_locale(token)
 
 
 def test_station_not_found_exception_returns_new_instance_each_call():
@@ -37,7 +46,6 @@ def test_station_not_found_exception_preserves_www_authenticate_header():
 
 
 def test_station_not_found_exception_uses_context_locale_when_not_passed(monkeypatch):
-    from i18n.context import set_current_locale
     set_current_locale("uk")
     exc = station_not_found_exception()  # without locale -> from context
     assert exc.detail != "Station not found"
