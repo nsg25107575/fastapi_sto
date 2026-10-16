@@ -1,8 +1,11 @@
 """Unit tests for OrderModel."""
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy import select
 
+from config import Config
+from i18n.dependency_translator import t
 from models.chat_message import ChatMessageModel, MessageType, SenderType
 from models.chat_room import ChatRoomModel, ChatRoomStatus
 from models.customer import CustomerModel
@@ -125,13 +128,14 @@ def test_create_order_rejects_service_from_a_different_station(db_session):
     service = _make_service(db_session, first_station.id)
     customer = _make_customer(db_session)
 
-    with pytest.raises(ValueError, match="does not belong"):
+    with pytest.raises(HTTPException) as exc_info:
         OrderModel.create_order(
             session=db_session,
             customer_id=customer.id,
             station_id=second_station.id,
             station_service_id=service.id,
         )
+    assert exc_info.value.status_code == 400
 
 
 def test_read_order(db_session):
@@ -207,7 +211,14 @@ def test_update_order_status_creates_system_message(db_session):
     assert message.message_type == MessageType.SYSTEM
     assert message.sender_type == SenderType.SYSTEM
     assert message.sender_id is None
-    assert message.body == "Order accepted"
+    assert message.body == t(
+        "order.status_updated",
+        locale=Config.app_default_locale,
+        status=t(
+            f"order.{result.status.value}",
+            locale=Config.app_default_locale,
+        ),
+    )
 
 
 def test_update_order_status_does_not_create_message_for_same_status(
