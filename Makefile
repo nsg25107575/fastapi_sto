@@ -160,7 +160,7 @@ seed:
 ## Create a seeder class (usage: make seeder-create name=ExampleSeeder)
 seeder-create:
 	$(if $(name),,$(error Usage: make seeder-create name=ExampleSeeder))
-	$(DC) exec api python -m seeders.create $(name)
+	$(DC) exec --user "$(shell id -u):$(shell id -g)" api python -m seeders.create $(name)
 ## List available seeders
 seeder-list:
 	$(DC) exec api python -m seeders --list
