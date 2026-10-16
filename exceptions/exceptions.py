@@ -66,10 +66,19 @@ def token_expired_exception(locale: str | None = None) -> HTTPException:
     )
 
 
+# --- Order ------------------------------------------------------------------------
 def order_not_found_exception(locale: str | None = None) -> HTTPException:
     return HTTPException(
         status_code=HTTP_404_NOT_FOUND,
         detail=t("order.not_found", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def order_customer_id_doesnt_refer_to_customer_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_400_BAD_REQUEST,
+        detail=t("order.customer_id_doesnt_refer_to_customer", locale=locale),
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -192,5 +201,14 @@ def admin_forbidden_exception(locale: str | None = None) -> HTTPException:
     return HTTPException(
         status_code=HTTP_403_FORBIDDEN,
         detail=t("station.admin_forbidden", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+# --- Services -------------------------------------------------------------
+def service_id_doesnt_belong_to_station_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_400_BAD_REQUEST,
+        detail=t("services.service_id_doesnt_belong_to_station", locale=locale),
         headers={"WWW-Authenticate": "Bearer"},
     )
