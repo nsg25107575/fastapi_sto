@@ -5,7 +5,7 @@
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 .PHONY: \
-  migrate migrate-up-index migrate-down-index migrate-up migrate-down \
+  migrate migrate-create migrate-up-index migrate-down-index migrate-up migrate-down \
   build up up-build down restart logs ps shell shell-db \
   _ensure_uv deps-update deps-update-package deps-outdated \
   test test-smoke test-verbose test-cov test-cov-html test-file
@@ -134,6 +134,9 @@ test-file:
 ## Autogenerate a new migration revision (usage: make migrate msg="describe the schema change")
 migrate:
 	$(DC) exec api python -m alembic revision --autogenerate -m "$(msg)"
+## Create an empty migration revision (usage: make migrate-create msg="describe the schema change")
+migrate-create:
+	$(DC) exec api python -m alembic revision -m "$(msg)"
 ## Upgrade migration by index (usage: make migrate-up-index index="1")
 migrate-up-index:
 	$(DC) exec api python -m alembic upgrade $(index)
