@@ -7,7 +7,7 @@ from starlette.responses import JSONResponse
 
 from config import Config
 from exceptions.exceptions import app_not_found_exception
-from i18n.context import set_current_locale
+from i18n.context import reset_current_locale, set_current_locale
 from i18n.dependency import get_locale
 from i18n.dependency_translator import t
 from routers.auth import router as auth_router
@@ -44,12 +44,14 @@ app.include_router(chat_router)
 # which is what happened at sto.kirweb.space/docs prior to this fix.
 @app.middleware("http")
 async def block_schema_endpoints_outside_dev(request: Request, call_next):
-    set_current_locale(get_locale(request))
+    locale_token = set_current_locale(get_locale(request))
+    try:
+        if request.url.path == "/openapi.json" and Config.app_env != "development":
+            return JSONResponse(status_code=404, content={"detail": t("app.not_found")})
 
-    if request.url.path == "/openapi.json" and Config.app_env != "development":
-        return JSONResponse(status_code=404, content={"detail": t("app.not_found")})
-
-    return await call_next(request)
+        return await call_next(request)
+    finally:
+        reset_current_locale(locale_token)
 
 
 @app.get("/docs", include_in_schema=False)
