@@ -9,7 +9,8 @@ set -e
 #    Also keeps pip up to date and ensures uv is available (dev tooling
 #    used by `make deps-update`, not an application dependency).
 # 2. Applies all pending Alembic migrations.
-# 3. Starts Uvicorn with the configured number of workers.
+# 3. Seeds initial lookup data.
+# 4. Starts Uvicorn with the configured number of workers.
 
 : "${DB_HOST:=db}"
 : "${DB_PORT:=3306}"
@@ -49,7 +50,10 @@ done
 echo "[entrypoint] Database is reachable. Applying migrations..."
 alembic upgrade head
 
-echo "[entrypoint] Migrations applied. Starting Uvicorn on port ${APP_PORT} with ${UVICORN_WORKERS} worker(s)..."
+echo "[entrypoint] Migrations applied. Seeding database..."
+python -m seeders
+
+echo "[entrypoint] Database seeded. Starting Uvicorn on port ${APP_PORT} with ${UVICORN_WORKERS} worker(s)..."
 if [ "$APP_ENV" = "development" ]; then
     echo "[entrypoint] APP_ENV=development — starting Uvicorn with --reload (single worker)..."
     exec uvicorn main:app \
