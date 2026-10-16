@@ -16,6 +16,15 @@ method is covered separately.
 """
 import os
 
+# Keep locale-dependent API tests deterministic in environments whose .env
+# does not configure all application locales (such as the CI image).
+os.environ["APP_DEFAULT_LOCALE"] = "en"
+os.environ["APP_SUPPORTED_LOCALES"] = (
+    '[{"abbr":"en","name":"English"},'
+    '{"abbr":"uk","name":"Українська"},'
+    '{"abbr":"pl","name":"Polski"}]'
+)
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
