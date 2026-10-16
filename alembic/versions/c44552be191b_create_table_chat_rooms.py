@@ -35,10 +35,7 @@ def upgrade() -> None:
         sa.UniqueConstraint('order_id')
     )
 
-    op.drop_constraint('fk_order_id_chatroom_order_id', 'chat_rooms', type_='foreignkey')
-
-
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_constraint('fk_order_id_chatroom_order_id', 'chat_rooms', type_='foreignkey')
+    op.drop_constraint("fk_order_id_chatroom_order_id", "chat_rooms", type_="foreignkey")
     op.drop_table('chat_rooms')
