@@ -26,9 +26,8 @@ def upgrade() -> None:
         sa.Column('name', sa.String(length=100), nullable=False),
         sa.Column('address', sa.String(length=200), nullable=False),
         sa.Column('active', sa.Boolean(), server_default=sa.text('1'), nullable=False),
-        sa.Column('moderation_status', sa.Enum('pending', 'approved', 'rejected', native_enum=False, length=20),
-                  server_default=sa.text("'pending'"), nullable=False),
-        sa.Column("rejection_reason", sa.String(length=255), nullable=True),
+        sa.Column("moderation_status", sa.String(length=20), server_default="pending", nullable=False),
+        sa.Column("rejection_reason", sa.Text(), nullable=True),
         sa.Column('latitude', sa.Numeric(precision=16, scale=14), nullable=True),
         sa.Column('longitude', sa.Numeric(precision=16, scale=14), nullable=True),
         sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
@@ -40,7 +39,9 @@ def upgrade() -> None:
     )
     op.create_index('idx_station_name', 'stations', ['name'], unique=False, if_not_exists=True)
     op.create_index('idx_station_address', 'stations', ['address'], unique=False, if_not_exists=True)
-    op.create_index('idx_station_longitude_latitude', 'stations', ['longitude', 'latitude'], unique=False,
+    op.create_index('idx_station_longitude_latitude', 'stations', ['longitude', 'latitude'], unique=True,
+                    if_not_exists=True)
+    op.create_index('idx_station_moderation_status', 'stations', ['moderation_status'], unique=False,
                     if_not_exists=True)
 
 
@@ -49,4 +50,5 @@ def downgrade() -> None:
     op.drop_index('idx_station_longitude_latitude', table_name='stations', if_exists=True)
     op.drop_index('idx_station_address', table_name='stations', if_exists=True)
     op.drop_index('idx_station_name', table_name='stations', if_exists=True)
+    op.drop_index('idx_station_moderation_status', table_name='stations', if_exists=True)
     op.drop_table('stations')
