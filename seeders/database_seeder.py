@@ -1,10 +1,11 @@
 from sqlalchemy.orm import Session
 
 from seeders.base import Seeder
-from seeders.registry import discover_seeders
+from seeders.registry import discover_seeders, resolve_seeder_order
 
 
 class DatabaseSeeder(Seeder):
     def run(self, session: Session) -> None:
-        for _name, seeder_class in discover_seeders().items():
+        seeders = discover_seeders()
+        for seeder_class in resolve_seeder_order(seeders):
             seeder_class().run(session)

@@ -95,6 +95,11 @@ apply migrations without restarting the API (e.g. in CI), you can still run:
 make migrate-up
 ```
 
+Make targets that create or update repository files run those commands in the
+API container with your host UID/GID. This keeps generated migrations,
+seeders, dependency lockfiles, and test reports editable by your user rather
+than owned by root.
+
 Seed the initial lookup data after the migrations when running natively (the
 Docker entrypoint seeds automatically):
 

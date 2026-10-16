@@ -21,8 +21,10 @@
 # giving a false pass/fail, or editing requirements.txt against the
 # wrong interpreter. The project directory is bind-mounted into the
 # container (`volumes: .:/app` in docker-compose.yml), so any file the
-# container writes (requirements.txt, migration scripts, coverage
-# reports) lands directly on the host, same as if it ran locally.
+# container writes (requirements.txt, migration scripts, pytest caches,
+# coverage reports, and generated seeders) lands directly on the host, same
+# as if it ran locally. File-writing commands use the invoking host UID/GID
+# to avoid creating root-owned files in the bind mount.
 #
 # All targets below require the `api` container to be running first
 # (`make up` / `make up-build`).
@@ -33,6 +35,7 @@
 # env_file, and its own .env lookup for ${VAR} substitution) against the
 # repo root, even though the compose file itself lives in docker/api/.
 DC := docker compose -f docker/api/docker-compose.yml --project-directory .
+DC_USER := --user "$(shell id -u):$(shell id -g)"
 # Export DC so the smoke scripts (run via bash) use the same compose command.
 # An inline `DC=... bash ...` prefix is not portable: on Windows make runs
 # recipes through cmd.exe, which does not understand that syntax.
@@ -84,11 +87,11 @@ _ensure_uv:
 
 ## Recompile requirements.txt with the latest versions allowed by pyproject.toml, then install it into the running api container
 deps-update: _ensure_uv
-	$(DC) exec api python -m uv pip compile --upgrade pyproject.toml --output-file requirements.txt
+	$(DC) exec $(DC_USER) -e UV_CACHE_DIR=/tmp/uv-cache-$(shell id -u) api python -m uv pip compile --upgrade pyproject.toml --output-file requirements.txt
 	$(DC) exec api python -m uv pip install --system -r requirements.txt
 ## Upgrade a single package only, then install the updated requirements.txt (usage: make deps-update-package package="fastapi")
 deps-update-package: _ensure_uv
-	$(DC) exec api python -m uv pip compile --upgrade-package $(package) pyproject.toml --output-file requirements.txt
+	$(DC) exec $(DC_USER) -e UV_CACHE_DIR=/tmp/uv-cache-$(shell id -u) api python -m uv pip compile --upgrade-package $(package) pyproject.toml --output-file requirements.txt
 	$(DC) exec api python -m uv pip install --system -r requirements.txt
 ## List installed packages that have newer versions available
 deps-outdated:
@@ -108,7 +111,7 @@ deps-outdated:
 # ───────────────────────────────────────────────────────────────────────────
 ## Run the smoke checks first, then the full test suite inside the api container
 test: test-smoke
-	$(DC) exec api python -m pytest -q
+	$(DC) exec $(DC_USER) api python -m pytest -q
 ## Run only the smoke checks (tests/smoke/*.sh) against the live stack: DB wiring and connectivity.
 ## They are read-only (SELECT 1 / TCP connect), but unlike pytest they DO talk to the real `db` service.
 ## DC is exported (see above) so the scripts use the same compose command as the other targets.
@@ -117,27 +120,27 @@ test-smoke:
 	bash tests/smoke/db_host_port_check.sh
 ## Run the full test suite inside the api container with verbose per-test output
 test-verbose:
-	$(DC) exec api python -m pytest -v
+	$(DC) exec $(DC_USER) api python -m pytest -v
 ## Run the full test suite inside the api container with a coverage summary (fails if coverage < 80%)
 test-cov:
-	$(DC) exec api python -m pytest --cov=. --cov-report=term-missing --cov-fail-under=80
+	$(DC) exec $(DC_USER) api python -m pytest --cov=. --cov-report=term-missing --cov-fail-under=80
 ## Run tests inside the api container with coverage and generate an HTML report (see htmlcov/index.html inside the container)
 test-cov-html:
-	$(DC) exec api python -m pytest --cov=. --cov-report=html --cov-report=term-missing
+	$(DC) exec $(DC_USER) api python -m pytest --cov=. --cov-report=html --cov-report=term-missing
 ## Run a single test file or node id inside the api container (usage: make test-file file="tests/test_stations.py")
 ## or make test-file file="tests/test_stations.py::test_create_station_success"
 test-file:
-	$(DC) exec api python -m pytest -v $(file)
+	$(DC) exec $(DC_USER) api python -m pytest -v $(file)
 
 # ───────────────────────────────────────────────────────────────────────────
 # Alembic — migration, run INSIDE the api container
 # ───────────────────────────────────────────────────────────────────────────
 ## Autogenerate a new migration revision (usage: make migrate msg="describe the schema change")
 migrate:
-	$(DC) exec api python -m alembic revision --autogenerate -m "$(msg)"
+	$(DC) exec $(DC_USER) api python -m alembic revision --autogenerate -m "$(msg)"
 ## Create an empty migration revision (usage: make migrate-create msg="describe the schema change")
 migrate-create:
-	$(DC) exec --user "$(shell id -u):$(shell id -g)" api python -m alembic revision -m "$(msg)"
+	$(DC) exec $(DC_USER) api python -m alembic revision -m "$(msg)"
 ## Upgrade migration by index (usage: make migrate-up-index index="1")
 migrate-up-index:
 	$(DC) exec api python -m alembic upgrade $(index)
@@ -160,7 +163,7 @@ seed:
 ## Create a seeder class (usage: make seeder-create name=ExampleSeeder)
 seeder-create:
 	$(if $(name),,$(error Usage: make seeder-create name=ExampleSeeder))
-	$(DC) exec --user "$(shell id -u):$(shell id -g)" api python -m seeders.create $(name)
+	$(DC) exec $(DC_USER) api python -m seeders.create $(name)
 ## List available seeders
 seeder-list:
 	$(DC) exec api python -m seeders --list

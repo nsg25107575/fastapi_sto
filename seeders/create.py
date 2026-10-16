@@ -25,6 +25,7 @@ def main() -> None:
         "from sqlalchemy.orm import Session\n\n"
         "from seeders.base import Seeder\n\n\n"
         f"class {class_name}(Seeder):\n"
+        "    depends_on = ()\n\n"
         "    def run(self, session: Session) -> None:\n"
         "        \"\"\"Add this seeder's database changes here.\"\"\"\n"
         "        pass\n",

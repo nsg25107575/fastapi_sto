@@ -160,10 +160,20 @@ kept separately in [`seeders/content/`](../seeders/content/).
 Open it in your editor and implement `Seeder.run(session)` with the models and
 seed data you need. For example, after `make seeder-create name=ExampleSeeder`,
 edit `seeders/content/example_seeder.py`.
-The seeder is then available to list and run individually, and is included in
-the default all-seeders command. Existing lookup rows are preserved; only
-missing names are inserted. The command wraps each run in a database
-transaction, so a failure rolls back that run.
+Declare prerequisite seeder classes in `depends_on`; they run first both when
+running all seeders and when running a seeder individually. For example:
+
+```python
+from seeders.content.station_roles_seeder import StationRolesSeeder
+
+class ExampleSeeder(Seeder):
+    depends_on = (StationRolesSeeder,)
+```
+
+The seeder is available to list and run individually, and is included in the
+default all-seeders command. Existing lookup rows are preserved; only missing
+names are inserted. The command wraps each run in a database transaction, so a
+failure rolls back the run.
 
 ## Known Gaps
 

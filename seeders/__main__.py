@@ -1,8 +1,7 @@
 import argparse
 
 from database.engine import SessionLocal
-from seeders.database_seeder import DatabaseSeeder
-from seeders.registry import discover_seeders
+from seeders.registry import discover_seeders, resolve_seeder_order
 
 
 def main() -> None:
@@ -25,13 +24,14 @@ def main() -> None:
         print("\n".join(seeders))
         return
 
-    seeder = (
-        DatabaseSeeder()
+    targets = (
+        seeders.values()
         if args.seeder == "all"
-        else seeders[args.seeder]()
+        else (seeders[args.seeder],)
     )
     with SessionLocal() as session, session.begin():
-        seeder.run(session)
+        for seeder_class in resolve_seeder_order(seeders, targets):
+            seeder_class().run(session)
 
     print(f"Database seeding complete: {args.seeder}")
 
