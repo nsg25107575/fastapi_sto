@@ -203,6 +203,111 @@ def test_get_order_requires_customer_cookie(
     assert response.status_code == 401, response.text
 
 
+def test_manager_can_get_order_for_assigned_station(
+        auth_client,
+        second_auth_client,
+        db_session,
+        client,
+):
+    from models.station_role import StationRoleModel
+    from models.station_user import StationUserModel
+
+    # The first authenticated user owns the station.
+    owner_client, _owner = auth_client
+    station_id, service_id = _make_station_with_service(
+        auth_client,
+        db_session,
+    )
+
+    # Create an order for an anonymous customer.
+    customer = _make_customer(client)
+    created = client.post(
+        "/orders/",
+        json={
+            "customer_id": customer["id"],
+            "station_id": station_id,
+            "station_service_id": service_id,
+        },
+    )
+    assert created.status_code == 201, created.text
+    order_id = created.json()["id"]
+
+    # The second authenticated user will be the station's Manager.
+    manager_client, manager = second_auth_client
+
+    manager_role = StationRoleModel(
+        name="Manager",
+        description="Manager role for testing",
+    )
+    db_session.add(manager_role)
+    db_session.flush()
+
+    assignment = StationUserModel(
+        station_id=station_id,
+        user_id=manager["id"],
+        role_id=manager_role.id,
+    )
+    db_session.add(assignment)
+    db_session.commit()
+    # The assigned Manager can view the station's order.
+    response = manager_client.get(f"/orders/{order_id}")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["id"] == order_id
+
+
+def test_cashier_cannot_get_order_for_assigned_station(
+        auth_client,
+        second_auth_client,
+        db_session,
+        client,
+):
+    from models.station_role import StationRoleModel
+    from models.station_user import StationUserModel
+
+    # Create a station owned by the first authenticated user.
+    station_id, service_id = _make_station_with_service(
+        auth_client,
+        db_session,
+    )
+
+    # Create an order for an anonymous customer.
+    customer = _make_customer(client)
+    created = client.post(
+        "/orders/",
+        json={
+            "customer_id": customer["id"],
+            "station_id": station_id,
+            "station_service_id": service_id,
+        },
+    )
+    assert created.status_code == 201, created.text
+    order_id = created.json()["id"]
+
+    # Assign the second authenticated user the Cashier role.
+    cashier_client, cashier = second_auth_client
+
+    cashier_role = StationRoleModel(
+        name="Cashier",
+        description="Cashier role for testing",
+    )
+    db_session.add(cashier_role)
+    db_session.flush()
+
+    assignment = StationUserModel(
+        station_id=station_id,
+        user_id=cashier["id"],
+        role_id=cashier_role.id,
+    )
+    db_session.add(assignment)
+    db_session.commit()
+
+    # Cashier has no order.manage permission.
+    response = cashier_client.get(f"/orders/{order_id}")
+
+    assert response.status_code == 403, response.text
+
+
 def test_get_order_not_found(client):
     response = client.get("/orders/999999")
 

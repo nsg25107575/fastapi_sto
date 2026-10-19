@@ -1,11 +1,17 @@
-from fastapi import APIRouter, Depends, status, Cookie, HTTPException
+from fastapi import APIRouter, Depends, status, Cookie
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from auth.authorization import check_station_permission
 from auth.dependencies import get_current_user, get_optional_current_user
 from database.engine import get_session
-from exceptions import invalid_order_service_exception, order_not_found_exception
+from exceptions import (
+    customer_cookie_missing_exception,
+    invalid_auth_cookie_exception,
+    invalid_order_service_exception,
+    order_forbidden_exception,
+    order_not_found_exception,
+)
 from models.customer import CustomerModel
 from models.order import OrderModel
 from models.user import UserModel
@@ -15,43 +21,6 @@ router = APIRouter(
     prefix="/orders",
     tags=["Orders"]
 )
-
-
-def get_order_for_customer(
-        order_id: int,
-        customer_device: str | None,
-        session: Session,
-) -> OrderModel:
-    """Return an order only if it belongs to the customer identified by cookie."""
-    if not customer_device:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Customer cookie is missing",
-        )
-
-    customer = session.query(CustomerModel).filter(
-        CustomerModel.device_hash == customer_device
-    ).first()
-
-    if customer is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Customer not found",
-        )
-
-    order = OrderModel.read_order(session=session, order_id=order_id)
-
-    if order is None:
-        raise order_not_found_exception()
-
-    if order.customer_id != customer.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access to this order is forbidden",
-        )
-
-    return order
-
 
 @router.post("/", response_model=OrderResponseSchema, status_code=status.HTTP_201_CREATED)
 def create_order(
@@ -95,10 +64,7 @@ def get_order(
 
     # A supplied station cookie must not silently fall back to anonymous access.
     if station and current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication cookie",
-        )
+        raise invalid_auth_cookie_exception()
 
     # Station owner or employee with order.manage permission.
     if current_user is not None:
@@ -112,10 +78,7 @@ def get_order(
 
     # Anonymous customer: only their own order.
     if not customer_device:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Customer cookie is missing",
-        )
+        raise customer_cookie_missing_exception()
 
     customer = session.scalar(
         select(CustomerModel).where(
@@ -124,16 +87,10 @@ def get_order(
     )
 
     if customer is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Customer not found",
-        )
+        raise customer_not_found_unauthorized_exception()
 
     if order.customer_id != customer.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access to this order is forbidden",
-        )
+        raise order_forbidden_exception()
 
     return order
 

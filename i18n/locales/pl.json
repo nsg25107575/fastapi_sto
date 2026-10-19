@@ -24,6 +24,7 @@
   },
   "auth": {
     "email_already_in_use": "Adres e-mail jest już używany",
+    "invalid_cookie": "Nieprawidłowe ciasteczko uwierzytelniające.",
     "session_expired": "Sesja wygasła lub została unieważniona",
     "registration_successful": "Rejestracja zakończona sukcesem",
     "login_successful": "Logowanie zakończone sukcesem",
@@ -39,6 +40,7 @@
     "cancelled": "anulowane",
     "status_updated": "Zamówienie {status}",
     "not_found": "Zamówienie nie znalezione",
+    "forbidden": "Nie masz uprawnień do tego zamówienia.",
     "invalid_service": "Określona usługa nie należy do określonej stacji",
     "customer_id_doesnt_refer_to_customer": "Identyfikator customer_id nie odnosi się do istniejącego klienta"
   },
@@ -55,7 +57,8 @@
     "already_exists": "Już przesłano opinię na temat tej stacji"
   },
   "customer": {
-    "not_found": "Nie znaleziono klienta"
+    "not_found": "Nie znaleziono klienta",
+    "cookie_missing": "Brak ciasteczka klienta."
   },
   "chat": {
     "room_archived": "Nie można wysyłać wiadomości do zarchiwizowanego pokoju czatu"

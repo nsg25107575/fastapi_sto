@@ -159,7 +159,41 @@ def customer_not_found_exception(locale: str | None = None) -> HTTPException:
     )
 
 
+def customer_not_found_unauthorized_exception(
+        locale: str | None = None,
+) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_401_UNAUTHORIZED,
+        detail=t("customer.not_found", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def customer_cookie_missing_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_401_UNAUTHORIZED,
+        detail=t("customer.cookie_missing", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def invalid_auth_cookie_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_401_UNAUTHORIZED,
+        detail=t("auth.invalid_cookie", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
 # --- Order ------------------------------------------------------------------------
+def order_forbidden_exception(locale: str | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=HTTP_403_FORBIDDEN,
+        detail=t("order.forbidden", locale=locale),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
 def order_not_found(locale: str | None = None) -> HTTPException:
     return HTTPException(
         status_code=HTTP_404_NOT_FOUND,

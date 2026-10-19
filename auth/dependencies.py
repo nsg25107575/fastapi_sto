@@ -35,7 +35,6 @@ def get_current_user(user: UserModel = Depends(manager)) -> UserModel:
     The manager has already called `load_user`, verified the token in the database, and returned the user.
     If the token is invalid, the manager itself will throw a 401 Unauthorized error.
     """
-
     return user
 
 

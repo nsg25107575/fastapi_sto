@@ -17,6 +17,7 @@
   },
   "auth": {
     "email_already_in_use": "Ця електронна адреса вже використовується.",
+    "invalid_cookie": "Недійсна cookie авторизації.",
     "session_expired": "Сесія закінчилася або була скасована.",
     "registration_successful": "Реєстрація успішна",
     "login_successful": "Вхід успішний",
@@ -32,6 +33,7 @@
     "cancelled": "скасовано",
     "status_updated": "Замовлення {status}",
     "not_found": "Замовлення не знайдено",
+    "forbidden": "Ви не маєте прав на доступ до цього замовлення.",
     "invalid_service": "Вказана послуга не належить до вказаної станції",
     "customer_id_doesnt_refer_to_customer": "customer_id не відноситься до існуючого клієнта"
   },
@@ -48,7 +50,8 @@
     "already_exists": "Ви вже надіслали відгук для цієї станції"
   },
   "customer": {
-    "not_found": "Клієнта не знайдено"
+    "not_found": "Клієнта не знайдено",
+    "cookie_missing": "Cookie клієнта відсутня."
   },
   "chat": {
     "room_archived": "Неможливо надсилати повідомлення до архівної кімнати чату"
