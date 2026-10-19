@@ -315,3 +315,139 @@ def test_delete_service_resets_station_moderation_to_pending(
     station = db_session.get(StationModel, station_id)
 
     assert station.moderation_status == "pending"
+
+
+def _assign_station_role(
+        db_session,
+        station_id,
+        user_id,
+        role_name,
+):
+    """Create a station role and assign it to a user."""
+    from models.station_role import StationRoleModel
+    from models.station_user import StationUserModel
+
+    role = StationRoleModel(
+        name=role_name,
+        description=f"{role_name} role for testing",
+    )
+    db_session.add(role)
+    db_session.flush()
+
+    assignment = StationUserModel(
+        station_id=station_id,
+        user_id=user_id,
+        role_id=role.id,
+    )
+    db_session.add(assignment)
+    db_session.commit()
+
+    return assignment
+
+
+def test_manager_can_manage_station_services(
+        auth_client,
+        second_auth_client,
+        db_session,
+):
+    """An assigned Manager can create, update and delete station services."""
+    owner_client, _owner = auth_client
+    manager_client, manager_user = second_auth_client
+
+    station_id = _create_station(auth_client)
+
+    _assign_station_role(
+        db_session,
+        station_id=station_id,
+        user_id=manager_user["id"],
+        role_name="Manager",
+    )
+
+    # Manager can create a service.
+    created = manager_client.post(
+        "/services/",
+        params={
+            "station_id": station_id,
+            "name": "Oil change",
+            "price": 20.0,
+        },
+    )
+    assert created.status_code == 201, created.text
+    service_id = created.json()["id"]
+
+    # Manager can update the service.
+    updated = manager_client.put(
+        f"/services/{service_id}",
+        params={"price": 25.0},
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["price"] == 25.0
+
+    # Manager can delete the service.
+    deleted = manager_client.delete(f"/services/{service_id}")
+    assert deleted.status_code == 200, deleted.text
+
+    # The service should no longer exist.
+    missing = owner_client.get(f"/services/{service_id}")
+    assert missing.status_code == 404, missing.text
+
+
+def test_cashier_cannot_manage_station_services(
+        auth_client,
+        second_auth_client,
+        db_session,
+):
+    """An assigned Cashier cannot create, update or delete station services."""
+    owner_client, _owner = auth_client
+    cashier_client, cashier_user = second_auth_client
+
+    station_id = _create_station(auth_client)
+
+    # Create a service as the station owner.
+    created = owner_client.post(
+        "/services/",
+        params={
+            "station_id": station_id,
+            "name": "Oil change",
+            "price": 20.0,
+        },
+    )
+    assert created.status_code == 201, created.text
+    service_id = created.json()["id"]
+
+    _assign_station_role(
+        db_session,
+        station_id=station_id,
+        user_id=cashier_user["id"],
+        role_name="Cashier",
+    )
+
+    # Cashier cannot create a service.
+    create_attempt = cashier_client.post(
+        "/services/",
+        params={
+            "station_id": station_id,
+            "name": "Car wash",
+            "price": 15.0,
+        },
+    )
+    assert create_attempt.status_code == 403, create_attempt.text
+
+    # Cashier cannot update an existing service.
+    update_attempt = cashier_client.put(
+        f"/services/{service_id}",
+        params={"price": 99.0},
+    )
+    assert update_attempt.status_code == 403, update_attempt.text
+
+    # Cashier cannot delete an existing service.
+    delete_attempt = cashier_client.delete(
+        f"/services/{service_id}",
+    )
+    assert delete_attempt.status_code == 403, delete_attempt.text
+
+    # The original service must remain unchanged.
+    unchanged = owner_client.get(f"/services/{service_id}")
+    assert unchanged.status_code == 200, unchanged.text
+    assert unchanged.json()["name"] == "Oil change"
+    assert unchanged.json()["price"] == 20.0

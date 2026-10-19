@@ -134,6 +134,75 @@ def test_get_order_by_id(auth_client, db_session, client):
     assert response.json()["id"] == created["id"]
 
 
+def test_get_order_forbidden_for_another_customer(
+        auth_client,
+        db_session,
+        client,
+):
+    station_id, service_id = _make_station_with_service(
+        auth_client,
+        db_session,
+    )
+
+    # First customer creates an order.
+    first_customer = _make_customer(client)
+
+    created = client.post(
+        "/orders/",
+        json={
+            "customer_id": first_customer["id"],
+            "station_id": station_id,
+            "station_service_id": service_id,
+        },
+    )
+    assert created.status_code == 201, created.text
+    order_id = created.json()["id"]
+
+    # A separate client has a different customer_device cookie.
+    from fastapi.testclient import TestClient
+    from main import app
+
+    with TestClient(app) as another_client:
+        _make_customer(another_client)
+
+        response = another_client.get(f"/orders/{order_id}")
+
+    assert response.status_code == 403, response.text
+
+
+def test_get_order_requires_customer_cookie(
+        auth_client,
+        db_session,
+        client,
+):
+    station_id, service_id = _make_station_with_service(
+        auth_client,
+        db_session,
+    )
+
+    customer = _make_customer(client)
+
+    created = client.post(
+        "/orders/",
+        json={
+            "customer_id": customer["id"],
+            "station_id": station_id,
+            "station_service_id": service_id,
+        },
+    )
+    assert created.status_code == 201, created.text
+    order_id = created.json()["id"]
+
+    # A new client has no customer_device cookie.
+    from fastapi.testclient import TestClient
+    from main import app
+
+    with TestClient(app) as anonymous_client:
+        response = anonymous_client.get(f"/orders/{order_id}")
+
+    assert response.status_code == 401, response.text
+
+
 def test_get_order_not_found(client):
     response = client.get("/orders/999999")
 
@@ -255,7 +324,9 @@ def test_update_order_status_forbidden_for_non_owner(
     assert created_response.status_code == 201, created_response.text
     order_id = created_response.json()["id"]
 
-    response = second_auth_client.put(
+    second_client, _ = second_auth_client
+
+    response = second_client.put(
         f"/orders/{order_id}/status",
         json={"status": "confirmed"},
     )

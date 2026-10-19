@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from auth.authorization import check_station_ownership
+from auth.authorization import check_station_permission
 from auth.dependencies import get_current_user
 from database.engine import get_session
 from exceptions.exceptions import (
@@ -47,7 +47,12 @@ def create_station_contact(
         if station is None:
             raise station_not_found_exception()
 
-        check_station_ownership(station, current_user)
+        check_station_permission(
+            station=station,
+            current_user=current_user,
+            session=session,
+            permission="station_contact.manage",
+        )
 
         contact = StationContactModel(
             station_id=contact_data.station_id,
@@ -143,7 +148,12 @@ def update_station_contact(
         if station is None:
             raise station_not_found_exception()
 
-        check_station_ownership(station, current_user)
+        check_station_permission(
+            station=station,
+            current_user=current_user,
+            session=session,
+            permission="station_contact.manage",
+        )
 
         update_data = contact_data.model_dump(exclude_unset=True)
 
@@ -184,7 +194,12 @@ def delete_station_contact(
         if station is None:
             raise station_not_found_exception()
 
-        check_station_ownership(station, current_user)
+        check_station_permission(
+            station=station,
+            current_user=current_user,
+            session=session,
+            permission="station_contact.manage",
+        )
 
         session.delete(contact)
         session.commit()

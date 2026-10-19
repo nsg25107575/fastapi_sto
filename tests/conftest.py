@@ -203,9 +203,12 @@ def second_auth_client(client):
     """A second authenticated client sharing the test database."""
     import uuid
 
-    second_client = TestClient(app)
+    from fastapi.testclient import TestClient
+    from main import app
 
+    second_client = TestClient(app)
     email = f"second-{uuid.uuid4().hex[:8]}@example.com"
+
     response = second_client.post(
         "/auth/sign-up",
         json={
@@ -217,5 +220,9 @@ def second_auth_client(client):
     )
     assert response.status_code == 201, response.text
 
-    yield second_client
+    user_payload = dict(response.json()["detail"][0])
+    user_payload["email"] = email
+
+    yield second_client, user_payload
+
     second_client.close()

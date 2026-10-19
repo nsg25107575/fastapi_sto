@@ -37,3 +37,10 @@ def get_current_user(user: UserModel = Depends(manager)) -> UserModel:
     """
 
     return user
+
+
+async def get_optional_current_user(
+        user: UserModel | None = Depends(manager.optional),
+) -> UserModel | None:
+    """Return the authenticated user or None for an anonymous request."""
+    return user

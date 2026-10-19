@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from auth.authorization import check_station_ownership
+from auth.authorization import check_station_permission
 from auth.dependencies import get_current_user
 from database.engine import get_session
 from exceptions.exceptions import (
@@ -34,7 +34,12 @@ def create_service(
         if station is None:
             raise station_not_found_exception()
 
-        check_station_ownership(station, current_user)
+        check_station_permission(
+            station=station,
+            current_user=current_user,
+            session=session,
+            permission="service.manage",
+        )
 
         service = StationServiceModel.add_service(
             session=session,
@@ -116,7 +121,12 @@ def edit_service(
         if station is None:
             raise station_not_found_exception()
 
-        check_station_ownership(station, current_user)
+        check_station_permission(
+            station=station,
+            current_user=current_user,
+            session=session,
+            permission="service.manage",
+        )
 
         service = StationServiceModel.update_service(
             session=session,
@@ -159,7 +169,12 @@ def remove_service(
         if station is None:
             raise station_not_found_exception()
 
-        check_station_ownership(station, current_user)
+        check_station_permission(
+            station=station,
+            current_user=current_user,
+            session=session,
+            permission="service.manage",
+        )
 
         deleted_service_id = StationServiceModel.delete_service(
             session=session,
