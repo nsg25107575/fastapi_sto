@@ -58,6 +58,15 @@ class Config:
     geocoding_user_agent: str = os.getenv("GEOCODING_USER_AGENT", "kws-station-api/1.0")
     geocoding_timeout: float = float(os.getenv("GEOCODING_TIMEOUT", 5))
 
+    # Email / SMTP configuration
+    smtp_host: str = os.getenv("SMTP_HOST", "")
+    smtp_port: int = int(os.getenv("SMTP_PORT", 587))
+    smtp_username: str = os.getenv("SMTP_USERNAME", "")
+    smtp_password: str = os.getenv("SMTP_PASSWORD", "")
+    smtp_from_email: str = os.getenv("SMTP_FROM_EMAIL", "")
+    smtp_from_name: str = os.getenv("SMTP_FROM_NAME", "KWS Station")
+    smtp_security: str = os.getenv("SMTP_SECURITY", "starttls").strip().lower()
+    smtp_timeout: float = float(os.getenv("SMTP_TIMEOUT", 10))
     # DB configuration
     db_url: str = _build_db_url()
 
