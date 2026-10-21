@@ -12,6 +12,7 @@ from models.station import StationModel
 from models.station_service import StationServiceModel
 from models.user import UserModel
 from validations.pagination import PaginatedResponse, PaginationParams
+from validations.service import ServiceCreateSchema, ServiceUpdateSchema
 
 router = APIRouter(
     prefix="/services",
@@ -21,15 +22,13 @@ router = APIRouter(
 
 @router.post("/", status_code=201)
 def create_service(
-        station_id: int,
-        name: str,
-        price: float | None = None,
+        payload: ServiceCreateSchema,
         current_user: UserModel = Depends(get_current_user),
         session: Session = Depends(get_session),
 ):
     """Create a service for a station owned by the current user."""
     try:
-        station = StationModel.read_station(session, station_id)
+        station = StationModel.read_station(session, payload.station_id)
 
         if station is None:
             raise station_not_found_exception()
@@ -43,9 +42,9 @@ def create_service(
 
         service = StationServiceModel.add_service(
             session=session,
-            station_id=station_id,
-            name=name,
-            price=price,
+            station_id=payload.station_id,
+            name=payload.name,
+            price=payload.price,
         )
 
         if service is None:
@@ -101,8 +100,7 @@ def read_service(
 @router.put("/{service_id}")
 def edit_service(
         service_id: int,
-        name: str | None = None,
-        price: float | None = None,
+        payload: ServiceUpdateSchema,
         current_user: UserModel = Depends(get_current_user),
         session: Session = Depends(get_session),
 ):
@@ -128,11 +126,12 @@ def edit_service(
             permission="service.manage",
         )
 
+        update_data = payload.model_dump(exclude_unset=True)
+
         service = StationServiceModel.update_service(
             session=session,
             service_id=service_id,
-            name=name,
-            price=price,
+            **update_data,
         )
 
         if service is None:

@@ -24,7 +24,7 @@ def _set_station_moderation_status(db_session, station_id: int, status: str):
 def test_create_service_requires_auth(client):
     response = client.post(
         "/services/",
-        params={"station_id": 1, "name": "Oil change", "price": 20.0},
+        json={"station_id": 1, "name": "Oil change", "price": 20.0},
     )
 
     assert response.status_code == 401
@@ -36,7 +36,7 @@ def test_create_service_success(auth_client):
 
     response = client.post(
         "/services/",
-        params={"station_id": station_id, "name": "Oil change", "price": 20.0},
+        json={"station_id": station_id, "name": "Oil change", "price": 20.0},
     )
 
     assert response.status_code == 201, response.text
@@ -51,7 +51,7 @@ def test_read_service_by_id(auth_client):
 
     created = client.post(
         "/services/",
-        params={"station_id": station_id, "name": "Brake check", "price": 30.0},
+        json={"station_id": station_id, "name": "Brake check", "price": 30.0},
     ).json()
 
     response = client.get(f"/services/{created["id"]}")
@@ -71,7 +71,7 @@ def test_edit_service_requires_auth(auth_client):
     station_id = _create_station(auth_client)
     created = client.post(
         "/services/",
-        params={"station_id": station_id, "name": "Battery check", "price": 5.0},
+        json={"station_id": station_id, "name": "Battery check", "price": 5.0},
     ).json()
 
     from fastapi.testclient import TestClient
@@ -80,7 +80,7 @@ def test_edit_service_requires_auth(auth_client):
     with TestClient(app) as anon_client:
         response = anon_client.put(
             f"/services/{created["id"]}",
-            params={"price": 999.0},
+            json={"price": 999.0},
         )
 
     assert response.status_code == 401
@@ -91,12 +91,12 @@ def test_edit_service_success(auth_client):
     station_id = _create_station(auth_client)
     created = client.post(
         "/services/",
-        params={"station_id": station_id, "name": "Battery check", "price": 5.0},
+        json={"station_id": station_id, "name": "Battery check", "price": 5.0},
     ).json()
 
     response = client.put(
         f"/services/{created["id"]}",
-        params={"price": 7.5},
+        json={"price": 7.5},
     )
 
     assert response.status_code == 200
@@ -108,7 +108,7 @@ def test_edit_service_not_found(auth_client):
 
     response = client.put(
         "/services/999999",
-        params={"price": 1.0},
+        json={"price": 1.0},
     )
 
     assert response.status_code == 404
@@ -119,7 +119,7 @@ def test_remove_service_success(auth_client):
     station_id = _create_station(auth_client)
     created = client.post(
         "/services/",
-        params={"station_id": station_id, "name": "Wash", "price": 3.0},
+        json={"station_id": station_id, "name": "Wash", "price": 3.0},
     ).json()
 
     response = client.delete(f"/services/{created["id"]}")
@@ -147,9 +147,9 @@ def test_read_services_returns_distinct_names(auth_client):
     client, _user = auth_client
     station_id = _create_station(auth_client)
 
-    client.post("/services/", params={"station_id": station_id, "name": "Tire change", "price": 10.0})
-    client.post("/services/", params={"station_id": station_id, "name": "Tire change", "price": 15.0})
-    client.post("/services/", params={"station_id": station_id, "name": "Oil change", "price": 20.0})
+    client.post("/services/", json={"station_id": station_id, "name": "Tire change", "price": 10.0})
+    client.post("/services/", json={"station_id": station_id, "name": "Tire change", "price": 15.0})
+    client.post("/services/", json={"station_id": station_id, "name": "Oil change", "price": 20.0})
 
     response = client.get("/services/")
 
@@ -168,7 +168,7 @@ def test_read_services_respects_limit(auth_client):
     station_id = _create_station(auth_client)
 
     for name in ("Oil", "Tire", "Brake"):
-        client.post("/services/", params={"station_id": station_id, "name": name, "price": 10.0})
+        client.post("/services/", json={"station_id": station_id, "name": name, "price": 10.0})
 
     response = client.get("/services/", params={"limit": 2})
 
@@ -241,7 +241,7 @@ def test_create_service_resets_station_moderation_to_pending(
 
     response = client.post(
         "/services/",
-        params={
+        json={
             "station_id": station_id,
             "name": "Oil change",
             "price": 20.0,
@@ -264,7 +264,7 @@ def test_edit_service_resets_station_moderation_to_pending(
 
     created = client.post(
         "/services/",
-        params={
+        json={
             "station_id": station_id,
             "name": "Brake check",
             "price": 30.0,
@@ -277,7 +277,7 @@ def test_edit_service_resets_station_moderation_to_pending(
 
     response = client.put(
         f"/services/{service_id}",
-        params={"price": 35.0},
+        json={"price": 35.0},
     )
 
     assert response.status_code == 200, response.text
@@ -296,7 +296,7 @@ def test_delete_service_resets_station_moderation_to_pending(
 
     created = client.post(
         "/services/",
-        params={
+        json={
             "station_id": station_id,
             "name": "Car wash",
             "price": 15.0,
@@ -366,7 +366,7 @@ def test_manager_can_manage_station_services(
     # Manager can create a service.
     created = manager_client.post(
         "/services/",
-        params={
+        json={
             "station_id": station_id,
             "name": "Oil change",
             "price": 20.0,
@@ -378,7 +378,7 @@ def test_manager_can_manage_station_services(
     # Manager can update the service.
     updated = manager_client.put(
         f"/services/{service_id}",
-        params={"price": 25.0},
+        json={"price": 25.0},
     )
     assert updated.status_code == 200, updated.text
     assert updated.json()["price"] == 25.0
@@ -406,7 +406,7 @@ def test_cashier_cannot_manage_station_services(
     # Create a service as the station owner.
     created = owner_client.post(
         "/services/",
-        params={
+        json={
             "station_id": station_id,
             "name": "Oil change",
             "price": 20.0,
@@ -425,7 +425,7 @@ def test_cashier_cannot_manage_station_services(
     # Cashier cannot create a service.
     create_attempt = cashier_client.post(
         "/services/",
-        params={
+        json={
             "station_id": station_id,
             "name": "Car wash",
             "price": 15.0,
@@ -436,7 +436,7 @@ def test_cashier_cannot_manage_station_services(
     # Cashier cannot update an existing service.
     update_attempt = cashier_client.put(
         f"/services/{service_id}",
-        params={"price": 99.0},
+        json={"price": 99.0},
     )
     assert update_attempt.status_code == 403, update_attempt.text
 
@@ -451,3 +451,53 @@ def test_cashier_cannot_manage_station_services(
     assert unchanged.status_code == 200, unchanged.text
     assert unchanged.json()["name"] == "Oil change"
     assert unchanged.json()["price"] == 20.0
+
+
+def test_create_service_requires_station_id_in_body(auth_client):
+    client, _user = auth_client
+
+    response = client.post(
+        "/services/",
+        json={"name": "Oil change", "price": 20.0},
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_service_requires_name_in_body(auth_client):
+    client, _user = auth_client
+    station_id = _create_station(auth_client)
+
+    response = client.post(
+        "/services/",
+        json={"station_id": station_id, "price": 20.0},
+    )
+
+    assert response.status_code == 422
+
+
+def test_edit_service_accepts_partial_json_body(auth_client):
+    client, _user = auth_client
+    station_id = _create_station(auth_client)
+
+    created = client.post(
+        "/services/",
+        json={
+            "station_id": station_id,
+            "name": "Oil change",
+            "price": 20.0,
+        },
+    )
+
+    assert created.status_code == 201, created.text
+
+    service_id = created.json()["id"]
+
+    response = client.put(
+        f"/services/{service_id}",
+        json={"price": 25.0},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["name"] == "Oil change"
+    assert response.json()["price"] == 25.0
