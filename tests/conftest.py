@@ -193,7 +193,7 @@ def auth_client(client):
     response = client.post("/auth/sign-up", json=payload)
     assert response.status_code == 201, response.text
 
-    user_payload = dict(response.json()["detail"][0])
+    user_payload = dict(response.json()["data"])
     user_payload["email"] = email  # not included in the sign-up response body
     return client, user_payload
 
@@ -220,7 +220,7 @@ def second_auth_client(client):
     )
     assert response.status_code == 201, response.text
 
-    user_payload = dict(response.json()["detail"][0])
+    user_payload = dict(response.json()["data"])
     user_payload["email"] = email
 
     yield second_client, user_payload

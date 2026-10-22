@@ -1,7 +1,9 @@
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -18,12 +20,57 @@ from routers.review import router as review_router
 from routers.service import router as service_router
 from routers.station_contact import router as station_contact_router
 from routers.stations import router as station_router
+from schemas.api_response import APIResponse
 
 load_dotenv()
 
 app = FastAPI(
     docs_url=None
 )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(
+        request: Request,
+        exc: StarletteHTTPException,
+) -> JSONResponse:
+    response = APIResponse(
+        success=False,
+        message=str(exc.detail),
+        data=None,
+    )
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=response.model_dump(),
+        headers=exc.headers,
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+        request: Request,
+        exc: RequestValidationError,
+) -> JSONResponse:
+    errors = [
+        {
+            "field": ".".join(str(part) for part in error["loc"]),
+            "message": error["msg"],
+        }
+        for error in exc.errors()
+    ]
+
+    response = APIResponse(
+        success=False,
+        message="Validation error",
+        data=errors,
+    )
+
+    return JSONResponse(
+        status_code=422,
+        content=response.model_dump(),
+    )
+
 
 app.include_router(auth_router)
 app.include_router(customer_router)
@@ -33,6 +80,7 @@ app.include_router(order_router)
 app.include_router(review_router)
 app.include_router(service_router)
 app.include_router(chat_router)
+
 
 # Lock down the interactive schema/docs endpoints outside local
 # development. Checked at REQUEST time (not import/startup time) against

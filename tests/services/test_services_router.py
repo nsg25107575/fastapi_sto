@@ -195,7 +195,7 @@ def test_read_service_returns_translated_not_found_message_for_uk(auth_client):
     client, _user = auth_client
     response = client.get("/services/999999", headers={"accept-language": "uk"})
     assert response.status_code == 404
-    assert response.json()["detail"] != "Service not found"  # must be a translation, not an en-fallback
+    assert response.json()["message"] != "Service not found"  # must be a translation, not an en-fallback
 
 
 def test_read_service_returns_english_not_found_message_by_default(auth_client):
@@ -206,7 +206,7 @@ def test_read_service_returns_english_not_found_message_by_default(auth_client):
     client, _user = auth_client
     response = client.get("/services/999999")
     assert response.status_code == 404
-    assert response.json()["detail"] == "Service not found"
+    assert response.json()["message"] == "Service not found"
 
 
 def test_edit_service_returns_translated_not_found_message(auth_client):
@@ -217,7 +217,7 @@ def test_edit_service_returns_translated_not_found_message(auth_client):
     client, _user = auth_client
     response = client.put("/services/999999", json={"name": "x"}, headers={"accept-language": "uk"})
     assert response.status_code == 404
-    assert response.json()["detail"] != "Service not found"
+    assert response.json()["message"] != "Service not found"
 
 
 def test_remove_service_returns_translated_not_found_message(auth_client):
@@ -228,7 +228,7 @@ def test_remove_service_returns_translated_not_found_message(auth_client):
     client, _user = auth_client
     response = client.delete("/services/999999", headers={"accept-language": "uk"})
     assert response.status_code == 404
-    assert response.json()["detail"] != "Service not found"
+    assert response.json()["message"] != "Service not found"
 
 
 def test_create_service_resets_station_moderation_to_pending(

@@ -197,7 +197,7 @@ def test_read_station_contact_not_found(client):
     response = client.get("/station-contacts/999999")
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Station contact not found"
+    assert response.json()["message"] == "Station contact not found"
 
 
 def test_update_station_contact_requires_auth(auth_client):
@@ -359,7 +359,7 @@ def test_read_station_contact_returns_translated_not_found_message(
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] != "Station contact not found"
+    assert response.json()["message"] != "Station contact not found"
 
 
 def _assign_station_role(

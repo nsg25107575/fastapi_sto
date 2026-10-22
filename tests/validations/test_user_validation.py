@@ -76,7 +76,7 @@ def test_sign_up_password_without_digit_returns_translated_error(client):
         headers={"accept-language": "uk"},
     )
     assert response.status_code == 422
-    messages = [e["msg"] for e in response.json()["detail"]]
+    messages = [item["message"] for item in response.json()["data"]]
     assert any("must contain at least one digit" not in m for m in messages)  # очікуємо переклад, не en-текст
 
 
@@ -90,7 +90,7 @@ def test_sign_up_password_without_digit_returns_english_error_by_default(client)
         json={"email": "y@example.com", "password": "NoDigits!", "first_name": "A", "last_name": "B"},
     )
     assert response.status_code == 422
-    messages = [e["msg"] for e in response.json()["detail"]]
+    messages = [item["message"] for item in response.json()["data"]]
     assert any("must contain at least one digit" in m for m in messages)
 
 
@@ -105,7 +105,7 @@ def test_sign_up_password_without_uppercase_returns_translated_error(client):
         headers={"accept-language": "uk"},
     )
     assert response.status_code == 422
-    messages = [e["msg"] for e in response.json()["detail"]]
+    messages = [item["message"] for item in response.json()["data"]]
     assert any("uppercase letter" not in m for m in messages)
 
 
@@ -120,7 +120,7 @@ def test_sign_up_name_with_invalid_chars_returns_translated_error(client):
         headers={"accept-language": "uk"},
     )
     assert response.status_code == 422
-    messages = [e["msg"] for e in response.json()["detail"]]
+    messages = [item["message"] for item in response.json()["data"]]
     assert any("hyphens" not in m for m in messages)
 
 
@@ -135,5 +135,5 @@ def test_sign_up_empty_name_returns_translated_error(client):
         headers={"accept-language": "uk"},
     )
     assert response.status_code == 422
-    messages = [e["msg"] for e in response.json()["detail"]]
+    messages = [item["message"] for item in response.json()["data"]]
     assert any("cannot be empty" not in m for m in messages)
