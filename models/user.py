@@ -6,12 +6,13 @@ from sqlalchemy.orm import Mapped, mapped_column, Session, relationship
 
 from auth.password import get_password_hash
 from database.engine import Base
+from models.mixin import SoftDeleteMixin
 
 if TYPE_CHECKING:
     from models.station import StationModel
 
 
-class UserModel(Base):
+class UserModel(SoftDeleteMixin, Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -31,7 +32,6 @@ class UserModel(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Connection to the service model
     stations: Mapped[list["StationModel"]] = relationship(
