@@ -45,6 +45,21 @@ def test_create_service_success(auth_client):
     assert data["price"] == 20.0
 
 
+def test_create_service_fails_for_nonexistent_station(auth_client):
+    client, _ = auth_client
+
+    response = client.post(
+        "/services/",
+        json={
+            "station_id": 999999,
+            "name": "Oil change",
+            "price": 20.0,
+        },
+    )
+
+    assert response.status_code == 404
+
+
 def test_read_service_by_id(auth_client):
     client, _user = auth_client
     station_id = _create_station(auth_client)
