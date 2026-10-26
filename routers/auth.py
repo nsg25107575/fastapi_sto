@@ -144,7 +144,7 @@ def sign_out(request: Request) -> JSONResponse:
 
 
 @router.get("/me", response_model=None)
-def get_current_user(
+def get_me(
         current_user: UserModel = Depends(manager),
 ) -> JSONResponse:
     return JSONResponse(
