@@ -93,3 +93,21 @@ class Config:
         Returns the cookie lifetime.
         """
         return timedelta(days=cls.max_cookie_lifetime_in_days)
+    # Validate security-sensitive configuration in production.
+
+
+if Config.app_env == "production":
+    insecure_secrets = []
+
+    if not Config.jwt_secret_key or Config.jwt_secret_key == "supersecretkey":
+        insecure_secrets.append("JWT_SECRET_KEY")
+
+    if not Config.cookie_secret or Config.cookie_secret == "supersecretkey":
+        insecure_secrets.append("COOKIES_SECRET_KEY")
+
+    if insecure_secrets:
+        secrets = ", ".join(insecure_secrets)
+        raise RuntimeError(
+            f"Insecure production configuration: {secrets} must be set "
+            "to secure, non-default values."
+        )
