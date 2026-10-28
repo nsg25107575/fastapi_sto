@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from auth.authorization import check_admin_access, check_station_ownership, check_station_permission
+from auth.authorization import check_admin_access, check_station_ownership
 from auth.dependencies import get_current_user
 from config import Config
 from database.engine import get_session
@@ -189,11 +189,9 @@ def update_station(
     if station is None:
         raise station_not_found_exception()
 
-    check_station_permission(
+    check_station_ownership(
         station=station,
         current_user=current_user,
-        session=session,
-        permission="station.update",
     )
 
     update_fields = payload.model_dump(exclude_none=True)

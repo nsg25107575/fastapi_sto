@@ -661,12 +661,12 @@ def test_station_owner_can_update_station(auth_client):
     assert response.json()["name"] == "Updated Owner STO"
 
 
-def test_manager_can_update_assigned_station(
+def test_manager_cannot_update_assigned_station(
         auth_client,
         second_auth_client,
         db_session,
 ):
-    """A Manager assigned to a station can update it."""
+    """A Manager assigned to a station cannot update it."""
     owner_client, _owner = auth_client
     manager_client, manager_user_payload = second_auth_client
 
@@ -692,8 +692,12 @@ def test_manager_can_update_assigned_station(
         json={"name": "Updated Manager STO"},
     )
 
-    assert response.status_code == 200, response.text
-    assert response.json()["name"] == "Updated Manager STO"
+    assert response.status_code == 403
+
+    # The station must remain unchanged after the forbidden request.
+    station_response = owner_client.get(f"/stations/{station_id}")
+    assert station_response.status_code == 200
+    assert station_response.json()["name"] == "Manager STO"
 
 
 def test_cashier_cannot_update_assigned_station(
