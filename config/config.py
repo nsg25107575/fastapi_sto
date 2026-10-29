@@ -76,7 +76,6 @@ class Config:
     jwt_expires_in: int = int(os.getenv("JWT_EXPIRES_IN", 3600))
 
     # Cookies configuration
-    cookie_secret: str = os.getenv("COOKIES_SECRET_KEY", "supersecretkey")  # TODO: change to a secure key in production
     cookie_secure: bool = bool(os.getenv("COOKIES_SECURE", False))  # TODO: change to True for HTTPS in production
     max_cookie_lifetime_in_days: int = int(os.getenv("MAX_COOKIE_AGE_IN_DAYS", 7))
 
@@ -97,17 +96,11 @@ class Config:
 
 
 if Config.app_env == "production":
-    insecure_secrets = []
-
-    if not Config.jwt_secret_key or Config.jwt_secret_key == "supersecretkey":
-        insecure_secrets.append("JWT_SECRET_KEY")
-
-    if not Config.cookie_secret or Config.cookie_secret == "supersecretkey":
-        insecure_secrets.append("COOKIES_SECRET_KEY")
-
-    if insecure_secrets:
-        secrets = ", ".join(insecure_secrets)
+    if (
+            not Config.jwt_secret_key
+            or Config.jwt_secret_key == "supersecretkey"
+    ):
         raise RuntimeError(
-            f"Insecure production configuration: {secrets} must be set "
-            "to secure, non-default values."
+            "Insecure production configuration: JWT_SECRET_KEY must be "
+            "set to a secure, non-default value."
         )
