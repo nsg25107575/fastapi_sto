@@ -169,13 +169,17 @@ def test_get_current_user_success():
             "second_name": "Smith",
         },
     )
+    print("SIGN UP STATUS:", sign_up_response.status_code)
+    print("SET-COOKIE:", sign_up_response.headers.get("set-cookie"))
+    print("COOKIES:", sign_up_response.cookies)
     assert sign_up_response.status_code == 201
 
     response = client.get(
         "/auth/me",
         cookies=sign_up_response.cookies,
     )
-
+    print("ME STATUS:", response.status_code)
+    print("ME BODY:", response.json())
     assert response.status_code == 200
 
     body = response.json()

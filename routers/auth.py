@@ -7,6 +7,7 @@ from starlette.responses import JSONResponse
 from auth.config import manager, COOKIE_PARAMS
 from auth.password import verify_password
 from config import Config
+from config.rate_limiter import limiter
 from database.engine import get_session
 from exceptions import duplicate_email_exception
 from i18n.dependency_translator import t
@@ -22,7 +23,9 @@ router = APIRouter(
 
 
 @router.post("/sign-up", response_model=None, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 def sign_up(
+        request: Request,
         credentials: UserCreateSchema,
         session: Session = Depends(get_session),
 ) -> JSONResponse:
@@ -75,7 +78,9 @@ def sign_up(
 
 
 @router.post("/sign-in", response_model=None, status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("5/minute")
 def sign_in(
+        request: Request,
         credentials: UserLoginSchema,
         session: Session = Depends(get_session),
 ) -> JSONResponse:

@@ -3,11 +3,13 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse
+from slowapi.errors import RateLimitExceeded
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from config import Config
+from config.rate_limiter import limiter
 from exceptions.exceptions import app_not_found_exception
 from i18n.context import reset_current_locale, set_current_locale
 from i18n.dependency import get_locale
@@ -27,6 +29,24 @@ load_dotenv()
 app = FastAPI(
     docs_url=None
 )
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(
+        request: Request,
+        exc: RateLimitExceeded,
+) -> JSONResponse:
+    response = APIResponse(
+        success=False,
+        message="Too many requests",
+        data=None,
+    )
+
+    return JSONResponse(
+        status_code=429,
+        content=response.model_dump(),
+    )
 
 
 @app.exception_handler(StarletteHTTPException)

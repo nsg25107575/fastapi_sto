@@ -42,6 +42,7 @@ os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["JWT_SECRET_KEY"] = "test-jwt-secret-at-least-32-bytes-long"
 os.environ["COOKIES_SECURE"] = ""
 
+from config.rate_limiter import limiter
 import database.engine as db_engine_module  # noqa: E402
 
 # A single shared in-memory SQLite database for the whole test process.
@@ -53,6 +54,14 @@ test_engine = create_engine(
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    """Reset rate limit counters before and after every test."""
+    limiter.reset()
+    yield
+    limiter.reset()
 
 
 @event.listens_for(test_engine, "connect")
