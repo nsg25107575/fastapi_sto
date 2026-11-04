@@ -17,8 +17,12 @@ FastAPI app (main.py)
   │
   ├── routers/auth.py        /auth/*       — sign-up, sign-in, sign-out, me
   ├── routers/stations.py    /stations/*   — station CRUD + nearest search
+  ├── routers/station_contact.py /station-contacts/* — station contacts
   ├── routers/service.py     /services/*   — per-station price list CRUD
   └── routers/customer.py    /customer/*   — anonymous geolocation capture
+      routers/order.py       /orders/*     — customer orders and status
+      routers/chat.py        /chat/*       — customer order messages
+      routers/review.py      /reviews/*    — completed-order reviews
          │
          ▼
    validations/*.py   — Pydantic request/response schemas (input validation)
@@ -49,23 +53,23 @@ FastAPI app (main.py)
   `get_current_user` FastAPI dependency (`auth/dependencies.py`).
 - **`database/`** — Engine/session construction (`engine.py`).
 - **`../config/config.py`** — Single source of truth for environment-derived
-  settings, exposed as a frozen `Config` dataclass.
+  settings, exposed as a `Config` dataclass.
 
 ## Key Modules
 
-| Module                        | Responsibility                                                              |
-|-------------------------------|-----------------------------------------------------------------------------|
-| `main.py`                     | FastAPI app instance, router registration, custom `/docs` page              |
-| `../config/config.py`         | Environment variable loading, `DATABASE_URL` resolution                     |
-| `database/engine.py`          | SQLAlchemy `Engine` (connection pool) + `get_session` dependency            |
-| `auth/config.py`              | `fastapi-login` `LoginManager` instance, cookie parameters                  |
-| `auth/dependencies.py`        | `load_user` (token → user) and `get_current_user` dependency                |
-| `auth/password.py`            | `bcrypt` password hashing/verification                                      |
-| `models/station.py`           | Station CRUD, full-text name search, nearest-station geo query, soft delete |
-| `models/station_service.py`   | Per-station price list CRUD + aggregated price ranges                       |
-| `models/user.py`              | User lookup/creation                                                        |
-| `models/token.py`             | Session token persistence (DB-backed, not stateless JWT-only)               |
-| `../exceptions/exceptions.py` | Centralized `HTTPException` instances reused across routers                 |
+| Module                        | Responsibility                                                                                                              |
+|-------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| `main.py`                     | FastAPI app instance, router registration, custom `/docs` page                                                              |
+| `../config/config.py`         | Environment variable loading, `DATABASE_URL` resolution                                                                     |
+| `database/engine.py`          | SQLAlchemy `Engine` (connection pool) + `get_session` dependency                                                            |
+| `auth/config.py`              | `fastapi-login` `LoginManager` instance, cookie parameters                                                                  |
+| `auth/dependencies.py`        | `load_user` (token → user) and authenticated/optional user dependencies; `load_user` opens a session from the shared engine |
+| `auth/password.py`            | `bcrypt` password hashing/verification                                                                                      |
+| `models/station.py`           | Station CRUD, full-text name search, nearest-station geo query, soft delete                                                 |
+| `models/station_service.py`   | Per-station price list CRUD + aggregated price ranges                                                                       |
+| `models/user.py`              | User lookup/creation                                                                                                        |
+| `models/token.py`             | Session token persistence (DB-backed, not stateless JWT-only)                                                               |
+| `../exceptions/exceptions.py` | Centralized `HTTPException` instances reused across routers                                                                 |
 
 ## Data Model Summary
 
@@ -78,14 +82,15 @@ See [DATABASE.md](DATABASE.md) for the full schema. Core entities:
 - **station_contacts**, **station_customers**, **station_roles**,
   **station_users**, **station_work_schedule** — station-adjacent entities
   for contacts, assigned staff/roles, linked customers, and work schedules.
-  *(Models exist and are migrated; most have no router yet — see
-  [ISSUES.md](ISSUES.md).)*
+  Station contacts have CRUD routes; station employee roles/permissions are
+  checked by the authorization layer, but role assignment and the remaining
+  entities have no standalone routes.
 - **tokens** — issued session tokens, DB-persisted so sessions can be
   revoked server-side (sign-out deletes the row).
 - **customers** — anonymous geolocation capture tied to a generated
   `device_hash`, not a `user`.
-- **vehicles**, **fuel_types** — user-owned vehicles. *(Models exist;
-  no router yet.)*
+- **vehicles**, **fuel_types** — user-owned vehicles and fuel types. Models
+  exist, but no routes expose them yet.
 
 ## Soft Delete Pattern (`StationModel`)
 

@@ -25,28 +25,28 @@ Copy the example file and fill in real values:
 cp .env.example .env
 ```
 
-| Variable                    | Description                                                                                                                          | Example                                      |
-|-----------------------------|--------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------|
-| `APP_NAME`                  | Application/service name                                                                                                             | `station-api`                                |
-| `APP_PORT`                  | Port the API listens on (host & container)                                                                                           | `8000`                                       |
-| `APP_ENV`                   | Environment name (`development`/`production`)                                                                                        | `development`                                |
-| `APP_TIMEZONE`              | Timezone used for timestamps                                                                                                         | `Europe/Kyiv`                                |
-| `APP_NEAREST_STATION_LIMIT` | Default limit for "nearest stations" search                                                                                          | `10`                                         |
-| `GEOCODING_BASE_URL`        | Address-to-coordinates provider endpoint (used by `POST /stations`)                                                                  | `https://nominatim.openstreetmap.org/search` |
-| `GEOCODING_USER_AGENT`      | User-Agent sent to the geocoding provider (required by Nominatim's usage policy)                                                     | `kws-station-api/1.0`                        |
-| `GEOCODING_TIMEOUT`         | Geocoding HTTP request timeout, in seconds                                                                                           | `5`                                          |
-| `DB_HOST`                   | Database host (the DB container name `kws_station_db` for Docker, `localhost` for native). Also used as the DB `container_name`      | `kws_station_db`                             |
-| `DB_PORT`                   | Port MariaDB listens on **inside** the Docker network (used by the API and `entrypoint.sh`). Keep `3306` for Docker                  | `3306`                                       |
-| `DB_HOST_PORT`              | Port published on the **host** for the DB container (only for access from the host, e.g. a DB client). Not used by the API container | `3310`                                       |
-| `DB_NAME`                   | Database name                                                                                                                        | `station_db`                                 |
-| `DB_USER`                   | Database user                                                                                                                        | `station_user`                               |
-| `DB_PASSWORD`               | Database user password                                                                                                               | *(secret)*                                   |
-| `DB_ROOT_PASSWORD`          | MariaDB root password (Docker only)                                                                                                  | *(secret)*                                   |
-| `JWT_SECRET_KEY`            | Secret used to sign JWT tokens                                                                                                       | *(secret, generate your own)*                |
-| `JWT_EXPIRES_IN`            | JWT expiration, in seconds                                                                                                           | `3600`                                       |
-| `COOKIES_SECRET_KEY`        | Secret used to sign cookies                                                                                                          | *(secret)*                                   |
-| `COOKIES_SECURE`            | Send cookies only over HTTPS                                                                                                         | `False` (dev) / `True` (prod)                |
-| `MAX_COOKIE_AGE_IN_DAYS`    | Cookie lifetime, in days                                                                                                             | `7`                                          |
+| Variable                    | Description                                                                                                                                               | Example                                      |
+|-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------|
+| `APP_NAME`                  | Application/service name                                                                                                                                  | `station-api`                                |
+| `APP_PORT`                  | Port the API listens on (host & container)                                                                                                                | `8000`                                       |
+| `APP_ENV`                   | Environment name (`development`/`production`)                                                                                                             | `development`                                |
+| `APP_TIMEZONE`              | Timezone used for timestamps                                                                                                                              | `Europe/Kyiv`                                |
+| `APP_NEAREST_STATION_LIMIT` | Default limit for "nearest stations" search                                                                                                               | `10`                                         |
+| `GEOCODING_BASE_URL`        | Address-to-coordinates provider endpoint (used by `POST /stations`)                                                                                       | `https://nominatim.openstreetmap.org/search` |
+| `GEOCODING_USER_AGENT`      | User-Agent sent to the geocoding provider (required by Nominatim's usage policy)                                                                          | `kws-station-api/1.0`                        |
+| `GEOCODING_TIMEOUT`         | Geocoding HTTP request timeout, in seconds                                                                                                                | `5`                                          |
+| `DB_HOST`                   | Database host (the DB container name `kws_station_db` for Docker, `localhost` for native). Also used as the DB `container_name`                           | `kws_station_db`                             |
+| `DB_PORT`                   | Port MariaDB listens on **inside** the Docker network (used by the API and `entrypoint.sh`). Keep `3306` for Docker                                       | `3306`                                       |
+| `DB_HOST_PORT`              | Port published on the **host** for the DB container (only for access from the host, e.g. a DB client). Not used by the API container                      | `3310`                                       |
+| `DB_NAME`                   | Database name                                                                                                                                             | `station_db`                                 |
+| `DB_USER`                   | Database user                                                                                                                                             | `station_user`                               |
+| `DB_PASSWORD`               | Database user password                                                                                                                                    | *(secret)*                                   |
+| `DB_ROOT_PASSWORD`          | MariaDB root password (Docker only)                                                                                                                       | *(secret)*                                   |
+| `JWT_SECRET_KEY`            | Secret used to sign JWT tokens                                                                                                                            | *(secret, generate your own)*                |
+| `JWT_EXPIRES_IN`            | Declared JWT expiration setting (currently not wired; lifetime follows `MAX_COOKIE_AGE_IN_DAYS`)                                                          | `3600`                                       |
+| `COOKIES_SECRET_KEY`        | Not currently read by the application; `JWT_SECRET_KEY` signs the session cookie                                                                          | *(unused)*                                   |
+| `COOKIES_SECURE`            | Cookie `Secure` attribute (`bool()` currently treats any non-empty value, including `False`, as true; see [ISSUE-20](ISSUES.md#correctness--consistency)) | `False` (dev) / `True` (prod)                |
+| `MAX_COOKIE_AGE_IN_DAYS`    | Cookie lifetime, in days                                                                                                                                  | `7`                                          |
 
 > **Database ports — don't mix them up.** `DB_PORT` is the port *inside*
 > the Docker network (always `3306` for the MariaDB image), while
@@ -56,8 +56,9 @@ cp .env.example .env
 > with `Database did not become reachable in time`.
 
 > **Security note:** never commit a real `.env` file. Generate strong,
-> unique values for `JWT_SECRET_KEY`, `COOKIES_SECRET_KEY`, `DB_PASSWORD`,
-> and `DB_ROOT_PASSWORD` before deploying anywhere beyond local development.
+> unique values for `JWT_SECRET_KEY`, `DB_PASSWORD`, and `DB_ROOT_PASSWORD`
+> before deploying anywhere beyond local development. `JWT_SECRET_KEY` is
+> also used to sign the session cookie.
 
 The application resolves the database connection in this order (see `../config/config.py`):
 1. An explicit `DATABASE_URL`, if set (used automatically inside Docker).

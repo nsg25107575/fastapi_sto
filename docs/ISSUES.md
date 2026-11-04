@@ -1,36 +1,33 @@
 # Issues & Improvement Backlog
 
-Tasks identified from full codebase reviews (2026-10-02). Each task is
-scoped to be small and independently actionable. Priority: 🔴 High (security
-or correctness bug) · 🟡 Medium (robustness/consistency) · 🟢 Low (polish).
+Current open items and resolved findings from codebase reviews, updated
+2026-11-04. Resolved entries are retained as implementation history.
+Priority: 🔴 High (security or correctness bug) · 🟡 Medium (robustness/consistency) · 🟢 Low (polish).
 
 ## Security
 
-### 🔴 ISSUE-1: Hardcoded fallback secrets in `config/config.py`
-`JWT_SECRET_KEY` and `COOKIES_SECRET_KEY` fall back to the literal string
-`"supersecretkey"` when the env var is unset. If the app is ever deployed
-without explicitly setting these, every token/cookie is forgeable.
-**Fix:** raise at startup if `APP_ENV=production` and either secret is
-unset or equals the default placeholder.
+### ✅ ISSUE-1 (RESOLVED): Production accepts the default JWT secret
 
-### 🔴 ISSUE-2: Station ownership not enforced on update/delete
-`PUT /stations/{id}` and `DELETE /stations/{id}` only require *some*
-authenticated user — not the station's owner (`station.user_id`). Any
-logged-in user can edit or delete any other user's station.
-**Fix:** compare `current_user.id == station.user_id` in
-`routers/stations.py`, raise `403 Forbidden` otherwise.
+`JWT_SECRET_KEY` still has a development fallback, but startup now raises
+when `APP_ENV=production` and that default is in use. The cookie uses the
+JWT signing key; `COOKIES_SECRET_KEY` is not currently read by the app.
 
-### 🟡 ISSUE-3: `COOKIES_SECRET_KEY` declared but unused
-`Config.cookie_secret` is read from env but never passed to
-`fastapi-login`'s `LoginManager` or used to sign the cookie separately from
-the JWT itself — it's effectively dead config, which is misleading.
-**Fix:** either wire it into cookie signing or remove it and document that
-`JWT_SECRET_KEY` alone secures the session.
+### ✅ ISSUE-2 (RESOLVED): Station ownership not enforced on update/delete
 
-### 🟡 ISSUE-4: No rate limiting on auth endpoints
-`/auth/sign-in` and `/auth/sign-up` have no throttling — vulnerable to
-credential stuffing / brute force.
-**Fix:** add `slowapi` (or similar) rate limiting, e.g. 5 attempts/min/IP.
+`PUT /stations/{id}` and `DELETE /stations/{id}` now call
+`check_station_ownership` and return `403` for non-owners. Station employee
+permissions are handled separately by the shared authorization layer.
+
+### 🟡 ISSUE-3: `COOKIES_SECRET_KEY` is unused
+
+`COOKIES_SECRET_KEY` is not loaded by `Config` or passed to
+`fastapi-login`; the JWT signing key secures the session cookie. Remove the
+unused setting or wire it into a separate cookie-signing mechanism.
+
+### ✅ ISSUE-4 (RESOLVED): No rate limiting on auth endpoints
+
+`/auth/sign-in` and `/auth/sign-up` are limited to five requests per minute
+using SlowAPI.
 
 ### 🟡 ISSUE-5: `request.client.host` unreliable behind a proxy
 `routers/customer.py` uses `request.client.host` directly as the stored
@@ -47,89 +44,104 @@ expires_at < NOW()` run via Alembic-adjacent maintenance script).
 
 ## Correctness / Consistency
 
-### 🟡 ISSUE-7: Mixed request styles (query params vs. JSON body)
-`routers/service.py` uses plain query parameters (`station_id`, `name`,
-`price`) while `routers/stations.py` and `routers/auth.py` use Pydantic
-request bodies. Inconsistent and harder to validate/document.
-**Fix:** add `ServiceCreateSchema` / `ServiceUpdateSchema` in
-`validations/service.py` and switch `routers/service.py` to JSON bodies.
+### ✅ ISSUE-7 (RESOLVED): Mixed request styles in the services router
 
-### 🟡 ISSUE-8: Mixed-language error messages
-`routers/service.py` raises `"Услуга не найдена"` (Russian) while
-`exceptions/exceptions.py` messages are English. Inconsistent for API
-consumers. **Fix:** move service-not-found to a named exception in
-`exceptions/exceptions.py`, in English, consistent with the rest. **✅ Resolved** (task #77): all user-facing strings —
-including this one —
-now go through the i18n layer (`t("service.not_found")`), with
-translations in `en`/`uk`/`pl`. No more hardcoded Russian text.
+The services router now uses `ServiceCreateSchema` and
+`ServiceUpdateSchema` JSON request bodies.
 
-### 🟡 ISSUE-9: Inconsistent success/error response envelopes
-Success responses in `routers/auth.py` use
-`{"detail": [{"type": "success", "msg": ...}]}`; errors use FastAPI's
-default `{"detail": "<str>"}`. Two different shapes for `detail`.
-**Fix:** pick one consistent response envelope (recommend a shared
-`APIResponse` Pydantic model) and apply it everywhere.
+### ✅ ISSUE-8 (RESOLVED): Mixed-language error messages
 
-### 🟡 ISSUE-10: `UserModel` has `deleted_at` but no soft-delete behavior
-`users.deleted_at` exists but `UserModel` doesn't mix in `SoftDeleteMixin`,
-so the column is unused and deleted users would still authenticate/appear
-in queries if ever set.
-**Fix:** either wire up `SoftDeleteMixin` for `UserModel` or remove the
-unused column via a migration.
+Service-not-found messages now use the i18n layer with `en`, `uk`, and `pl`
+translations; the hardcoded Russian message was removed.
 
-### 🟢 ISSUE-11: `station_id` not validated in `services` router
-`POST /services/` accepts any `station_id` without checking the station
-exists — creates orphaned/invalid rows if given a bad id. **Fix:** look up the station first, raise
-`station_not_found_exception()` if
-missing.
+### ✅ ISSUE-9 (RESOLVED): Inconsistent auth success/error envelopes
 
-### 🟢 ISSUE-12: Unused imports / duplicate `get_current_user` definitions
-`routers/auth.py` defines a local `get_current_user` endpoint handler with
-the **same name** as the dependency function in `auth/dependencies.py` —
-not a bug (different scopes/usages) but confusing to read.
-**Fix:** rename the route handler, e.g. `get_me`.
+Authentication success responses and application HTTP/validation errors now
+use the shared `APIResponse` shape. Other successful resource endpoints
+continue to return their resource schema directly.
 
-### 🟡 ISSUE-18: Inconsistent session acquisition (`get_session` vs. global `engine`)
-`routers/stations.py`, `routers/customer.py`, `routers/service.py` all use
-`Session = Depends(get_session)`; `routers/auth.py` instead opens
-`with Session(engine) as session:` using the module-level `engine` from
-`database.engine` directly. This bypasses `app.dependency_overrides`,
-which the test suite had to work around via monkey-patching (see
-[TESTING.md](TESTING.md)) — a sign it's also harder to reason about/mock
-in production. **Fix:** refactor `routers/auth.py` to accept `session: Session =
-Depends(get_session)` like every other router.
+### ✅ ISSUE-10 (RESOLVED): User soft-delete behavior missing
+
+`UserModel` now uses `SoftDeleteMixin`, so deleted users are hidden from
+default queries and authentication lookups.
+
+### ✅ ISSUE-11 (RESOLVED): `station_id` not validated in services router
+
+`POST /services/` now checks that the station exists before creating a
+service and returns the station-not-found response otherwise.
+
+### ✅ ISSUE-12 (RESOLVED): Confusing auth handler name
+
+The current-user endpoint handler is named `get_me`, distinct from the
+authentication dependency.
+
+### 🟡 ISSUE-18: `load_user` bypasses session dependency injection
+
+Most routes use `Depends(get_session)`, but the `load_user` callback in
+`auth/dependencies.py` opens `Session(engine)` directly. Tests must patch the
+shared engine before importing the app in addition to overriding the request
+dependency (see [TESTING.md](TESTING.md)). Consider injecting the session
+consistently if the authentication library integration permits it.
+
+### 🟡 ISSUE-19: Unknown customer cookie can raise `NameError` when reading an order
+
+In `routers/order.py`, the branch for a non-empty `customer_device` cookie
+that does not match a customer calls
+`customer_not_found_unauthorized_exception()`, but that exception is not
+imported into the module. The request therefore raises `NameError` instead
+of returning the intended unauthorized response. Add the missing import and
+a router test for an unknown customer cookie.
+
+### 🟡 ISSUE-20: `COOKIES_SECURE=False` is interpreted as true
+
+`config/config.py` sets `cookie_secure` with `bool(os.getenv(...))`.
+Environment values are strings, so any non-empty value—including the
+documented `.env.example` value `False`—enables the `Secure` cookie flag.
+Parse accepted boolean strings explicitly and test both true and false
+values.
+
+### 🟡 ISSUE-21: `JWT_EXPIRES_IN` is not used for token expiry
+
+`Config.jwt_expires_in` reads `JWT_EXPIRES_IN`, but `auth/config.py`
+configures `LoginManager.default_expiry` from
+`MAX_COOKIE_AGE_IN_DAYS` instead. Either wire the seconds-based setting into
+token creation or remove/document the unused setting consistently.
 
 ## Dependency Hygiene
 
 ### ✅ ISSUE-13 (RESOLVED 2026-10-02): Redundant password-hashing libraries
-`passlib`, `pwdlib`, and `argon2-cffi` are all declared dependencies, but
-`auth/password.py` uses `bcrypt` directly. Dead weight in the image and a
-larger attack surface to patch. **Fix:** confirmed unused anywhere in the codebase; removed from
-`pyproject.toml`/`requirements.txt`. See [dependency audit](#dependency-audit--update-2026-10-02) below.
+
+`passlib`, `pwdlib`, and `argon2-cffi` were removed from
+`pyproject.toml`/`requirements.txt`; `auth/password.py` uses `bcrypt`
+directly. See the [dependency audit](#dependency-audit--update-2026-10-02)
+below.
 
 ### ✅ ISSUE-14 (RESOLVED 2026-10-02): `services==0.1.1` dependency unclear
-A generically-named `services` package is pinned; unclear what it's used
-for (not imported anywhere found during review). **Fix:** confirmed unused anywhere in the codebase; removed.
+
+The unused generically-named `services` package was removed from the
+dependency files.
 
 ## Feature Gaps
 
-### 🟢 ISSUE-15: No endpoints for station_contacts / station_customers / station_users / station_roles / vehicles
-Models and migrations exist but no router exposes them — likely planned
-but not yet built.
-**Fix:** scope and implement CRUD routers per entity as separate tickets
-once prioritized.
+### 🟢 ISSUE-15: API routes missing for some modeled entities
 
-### 🟢 ISSUE-16: No role/permission enforcement
-`station_roles` / `station_users` exist but nothing checks a user's role
-before allowing station mutations (ties into ISSUE-2).
-**Fix:** design an authorization layer once ownership checks (ISSUE-2) are
-in place.
+Station contacts now have CRUD routes, and station employee roles are used
+by authorization checks. There are still no standalone routes for
+`station_customers`, role/user assignment, `station_work_schedule`,
+`vehicles`, or `fuel_types`.
+
+### ✅ ISSUE-16 (RESOLVED): No role/permission enforcement
+
+`auth/authorization.py` now checks station ownership and explicit employee
+permissions. For example, the Manager role grants station updates, service
+and contact management, and order management; other configured employee
+roles have no permissions by default.
 
 ### 🟢 ISSUE-17: No email verification or password reset flow
-`users.email_verified` column exists but is never set; no
-forgot-password endpoint.
-**Fix:** scope as a follow-up feature (needs an email-sending capability
-first).
+
+`users.email_verified` exists but is never set, and there is no
+forgot-password endpoint. An email service is available; implement the
+verification/reset token flows and their API endpoints.
 
 ## Documentation Gaps (addressed in this pass)
 
@@ -283,17 +295,18 @@ test suite) before trusting "this package has zero imports → it's safe
 to remove" — some dependencies are consumed indirectly by a framework (`TestClient`) or are platform-specific (`tzdata`
 on Windows).
 
-## Testing Gaps (addressed in this pass)
+## Test Suite History and Current Coverage
 
-- Prior to this pass, only `../tests/station/test_stations.py` existed, and it
-  depended on a real MariaDB connection with no isolation (shared
+- Before the test-suite work, only `../tests/station/test_stations.py`
+  existed, and it depended on a real MariaDB connection with no isolation (shared
   `TestSessionLocal`, no transaction rollback between tests, no fixtures
   for users/auth).
 - ✅ Added an isolated SQLite-based test setup (`tests/conftest.py`
   rewritten), per-module test files, and auth/service/customer coverage.
   See [TESTING.md](TESTING.md).
-- ✅ Achieved ~96% statement coverage on application code (target was
-  80%) — see [TESTING.md](TESTING.md#coverage).
+- Earlier runs achieved about 96% statement coverage; the latest measured
+  run is **90.2%** with 278 passing tests. See
+  [TESTING.md](TESTING.md#coverage) for current results and uncovered areas.
 - ✅ Added `make test`, `make test-verbose`, `make test-cov`,
   `make test-cov-html`, `make test-file` targets to the `Makefile`.
 
@@ -366,7 +379,6 @@ from PyJWT on every signed/decoded token.
    for HS256 HMAC keys. Lengthened both `JWT_SECRET_KEY` and
    `COOKIES_SECRET_KEY` test values to ≥32 bytes.
 
-**Result:** `make test` / `make test-cov` now produce **zero warnings**
-(verified by also running with `-W error::DeprecationWarning -W
-error::PendingDeprecationWarning`, which would fail the suite if any
-remained) — 89 passed, 96.4% coverage, clean output.
+**Result at that time:** `make test` / `make test-cov` produced zero
+warnings and 89 passed at 96.4% coverage. The latest run has four
+dependency deprecation warnings; see [TESTING.md](TESTING.md).

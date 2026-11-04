@@ -66,32 +66,31 @@ Enforced in `validations/user.py` via `field_validator`:
 - At least one digit, one uppercase letter, one lowercase letter, one
   special character (`!@#$%^&*(),.?":{}|<>`).
 
-Hashing uses `bcrypt` directly (`auth/password.py`), **not** `passlib` or
-`pwdlib`/`argon2-cffi`, even though both are present in the dependency list
-— see [ISSUES.md](ISSUES.md) for the resulting cleanup recommendation.
+Hashing uses `bcrypt` directly (`auth/password.py`).
 
 ## Secrets
 
-| Env var              | Used for                                                                                            |
-|----------------------|-----------------------------------------------------------------------------------------------------|
-| `JWT_SECRET_KEY`     | Signs/verifies JWTs (`fastapi-login` `LoginManager(secret=...)`)                                    |
-| `COOKIES_SECRET_KEY` | Declared in `Config` but **not currently passed** to the cookie signer — see [ISSUES.md](ISSUES.md) |
-| `COOKIES_SECURE`     | Whether the `station` cookie requires HTTPS (`Secure` flag)                                         |
+| Env var                  | Used for                                                       |
+|--------------------------|----------------------------------------------------------------|
+| `JWT_SECRET_KEY`         | Signs/verifies JWTs and therefore secures the `station` cookie |
+| `COOKIES_SECURE`         | Controls the cookie `Secure` attribute                         |
+| `MAX_COOKIE_AGE_IN_DAYS` | Sets the JWT/cookie lifetime used by `LoginManager`            |
 
-`../config/config.py` currently ships **hardcoded fallback values**
-(`"supersecretkey"`) for both `JWT_SECRET_KEY` and `COOKIES_SECRET_KEY` if
-the env vars are unset. This is convenient for local development but a
-real security risk if ever deployed without overriding them — see
-[ISSUES.md](ISSUES.md) (flagged as high priority).
+`COOKIES_SECRET_KEY` is not read by the application; `JWT_SECRET_KEY` is the
+signing key. In production, startup rejects a missing/default
+`JWT_SECRET_KEY`. The development fallback (`"supersecretkey"`) must not be
+used in production. `JWT_EXPIRES_IN` is present in configuration but is not
+currently wired into `LoginManager`; expiry follows
+`MAX_COOKIE_AGE_IN_DAYS`. See [ISSUES.md](ISSUES.md) for configuration
+follow-ups.
 
 ## Known Limitations
 
-- No role/permission system is enforced yet — `routers/auth.py:/me`
-  hardcodes `"roles": ["user"]` with a `# TODO: fill real user roles`.
-  `station_roles` / `station_users` tables exist but aren't wired to
-  authorization checks anywhere.
-- No rate limiting on `/auth/sign-in` or `/auth/sign-up` (brute-force /
-  credential-stuffing exposure).
+- `/auth/me` currently returns `"roles": ["user"]`; it does not report
+  station-specific employee roles. Station-management routes do enforce
+  owner and configured employee permissions via `auth/authorization.py`.
+- `/auth/sign-in` and `/auth/sign-up` are limited to five requests per minute
+  using SlowAPI.
 - No email verification flow, despite `users.email_verified` existing.
 - No password reset / forgot-password flow.
 - Session tokens are never cleaned up (`tokens` rows for expired sessions
