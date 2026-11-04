@@ -44,7 +44,6 @@ services:
     networks:
       - kws_station_net
       - kws_default
-    command: tail -f /dev/null
 
 networks:
   kws_station_net:
