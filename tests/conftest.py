@@ -80,14 +80,10 @@ TestSessionLocal = sessionmaker(
     autocommit=False,
 )
 
-# IMPORTANT: some routers (e.g. routers/auth.py) open sessions directly via
-# `with Session(engine) as session:` using the module-level `engine` from
-# database.engine, instead of the `get_session` FastAPI dependency. That
-# bypasses `app.dependency_overrides`, so those routes would otherwise hit
-# the real configured database. Patch the shared module objects BEFORE
-# importing `main` (which imports all routers) so every `from
-# database.engine import engine` picks up the test engine transitively.
-# See docs/ISSUES.md (ISSUE-18) for the underlying design fix.
+# IMPORTANT: auth.dependencies.load_user opens `Session(engine)` directly
+# to resolve tokens, bypassing `app.dependency_overrides`. Patch the shared
+# module objects BEFORE importing `main` so token lookups use the test DB;
+# regular request sessions are overridden separately below.
 db_engine_module.engine = test_engine
 db_engine_module.SessionLocal = TestSessionLocal
 
