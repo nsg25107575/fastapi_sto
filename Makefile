@@ -35,6 +35,9 @@
 # env_file, and its own .env lookup for ${VAR} substitution) against the
 # repo root, even though the compose file itself lives in docker/api/.
 DC := docker compose -f docker/api/docker-compose.yml --project-directory .
+DC_PROD := docker compose -f docker/api/docker-compose.yml \
+  -f docker/api/docker-compose.prod.yml \
+  --project-directory .
 DC_USER := --user "$(shell id -u):$(shell id -g)"
 # Export DC so the smoke scripts (run via bash) use the same compose command.
 # An inline `DC=... bash ...` prefix is not portable: on Windows make runs
@@ -52,7 +55,7 @@ up:
 	$(DC) up -d
 ## Rebuild the api image and start all services in the background
 up-build:
-	$(DC) up -d --build
+	$(DC_PROD) up -d --build
 ## Stop and remove all services (usage: make down args="-v" to also remove volumes)
 down:
 	$(DC) down $(args)
